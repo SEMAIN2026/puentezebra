@@ -1,0 +1,134 @@
+================================================================
+  Puentebra v1.0.0  —  Imprimir en la Zebra ZD220 por la red
+================================================================
+
+Hay dos programitas (los dos son .exe, no se instala nada):
+
+  * PuenteZebra-SERVIDOR.exe  -> va en TU computadora
+                                 (donde está conectada la ZD220)
+  * PuenteZebra-CLIENTE.exe   -> va en la computadora de tu
+                                 compañero (él imprime hacia ti)
+
+¿Cómo funciona? El CLIENTE manda las etiquetas por la red de la
+oficina al SERVIDOR, y el SERVIDOR las manda a la ZD220.
+
+----------------------------------------------------------------
+PASO 1 — En TU computadora (SERVIDOR)
+----------------------------------------------------------------
+1. Copia "PuenteZebra-SERVIDOR.exe" a una carpeta, por ejemplo:
+      C:\PuenteZebra\
+   (úsala doble clic para abrir; se abre una ventana y queda un
+    icono de impresora junto al reloj, cerca de la hora)
+
+2. En la lista "Impresora Zebra" elige tu ZD220
+   y dale a "Aplicar cambios".
+
+3. Dale al botón "Abrir en el Firewall".
+   -> Windows preguntará permisos (UAC): dale "Sí".
+   Esto se hace UNA SOLA VEZ.
+
+4. Dale a "Imprimir etiqueta de prueba" para confirmar que tu
+   impresora funciona.
+
+5. Anota la IP que aparece en "Estado", por ejemplo:
+      192.168.1.50
+   Esa IP es la que le vas a dar a tu compañero.
+
+TIP: para que la IP nunca cambie, pídele a quien configure la red
+fijar la IP de tu computadora (IP fija/reservada en el router).
+
+----------------------------------------------------------------
+PASO 2 — En la computadora de tu compañero (CLIENTE)
+----------------------------------------------------------------
+1. Copia "PuenteZebra-CLIENTE.exe" a una carpeta, por ejemplo:
+      C:\PuenteZebra\
+   Doble clic para abrir (también queda junto al reloj).
+
+2. Escribe la IP del paso 1 (ejemplo: 192.168.1.50)
+   y dale a "Aplicar cambios".
+
+3. Dale a "Probar conexión". Debe decir: CONEXIÓN OK.
+
+4. Dale a "Etiqueta de prueba": debe salir impresa en tu ZD220.
+
+5. Dale a "Instalar impresora virtual" (una sola vez, dale "Sí"
+   a la ventana de permisos de Windows).
+
+6. ¡Listo! En su Windows aparece una impresora nueva:
+
+        Zebra ZD220 (Red)
+
+   Cuando imprima ahí desde Word, Excel, su sistema o cualquier
+   programa, la etiqueta sale en TU ZD220.
+
+----------------------------------------------------------------
+CÓMO ACTUALIZAR (sin desinstalar ni reinstalar nada)
+----------------------------------------------------------------
+Cuando tengas una versión más nueva del programa, tienes 3 formas
+(solo aplica la que quieras):
+
+  A) Entra al programa, botón "Actualizar desde un archivo nuevo…"
+     y elige el .exe nuevo. El programa se reemplaza SOLO y se
+     reinicia. Nada se desinstala.
+
+  B) Copia el archivo nuevo A LA MISMA CARPETA del programa con
+     este nombre (ejemplo para versión 1.2.0):
+        PuenteZebra-SERVIDOR_v1.2.0.exe
+     (o PuenteZebra-CLIENTE_v1.2.0.exe)
+     La próxima vez que se abra el programa, lo detecta, se
+     actualiza solo y borra la versión vieja.
+
+  C) Si más adelante configuras una URL de descarga en el archivo
+     config.json ("url_actualizacion"), el programa revisa solo
+     si hay versión nueva, la baja y la aplica.
+
+IMPORTANTE: el archivo nuevo debe ser de la MISMA variante que el
+que estás reemplazando (SERVIDOR con SERVIDOR, CLIENTE con CLIENTE).
+
+----------------------------------------------------------------
+PROBLEMAS FRECUENTES
+----------------------------------------------------------------
+* "No se pudo conectar / sin respuesta"
+   - ¿Está abierto el SERVIDOR en tu PC? (icono junto al reloj)
+   - ¿Ya diste a "Abrir en el Firewall"?
+   - ¿La IP es la correcta? Si la red cambió, revisa la IP que
+     muestra el SERVIDOR.
+
+* "La impresora virtual queda como 'sin conexión' o fuera de línea"
+   - El CLIENTE debe estar abierto (junto al reloj) para recibir
+     lo que se imprime. Ábrelo y reintenta.
+
+* "Imprime pero sale raro / con símbolos"
+   - Si enviaron texto normal, deja activada la casilla
+     "Convertir texto a etiqueta" en el CLIENTE.
+   - Para etiquetas con diseño (logos, códigos), lo ideal es que
+     en la PC del compañero se instale el driver gratis de Zebra
+     (ZDesigner ZD220, en zebra.com/downloaddrivers) y que el
+     programa de etiquetas mande ZPL: PuenteZebra lo pasa tal
+     cual y sale perfecto.
+
+* "Windows o el antivirus me advierten al abrirlo"
+   - Es porque el programa no tiene firma digital de empresa.
+     El SERVIDOR solo abre un puerto en tu red local y el CLIENTE
+     solo manda etiquetas a esa dirección. Acepta "Ejecutar de
+     todas formas".
+
+* "Se cerró la ventana ¿se apagó?"
+   - No: al cerrar con la X se minimiza junto al reloj. Clic en
+     el icono de impresora para reabrir; ahí está el menú "Salir".
+
+* Si en algún momento quieres quitar la impresora virtual de la
+  PC del compañero: botón "Quitar impresora virtual".
+
+----------------------------------------------------------------
+DETALLES TÉCNICOS (por si alguien pregunta)
+----------------------------------------------------------------
+- Protocolo: impresión RAW estilo JetDirect (TCP). SERVIDOR por
+  defecto en el puerto 9100; CLIENTE usa el puerto local 9101.
+- Los ajustes se guardan en config.json junto a cada programa.
+- Registro de actividad: ventana "Registro" y también en
+  %LOCALAPPDATA%\PuenteZebra\log-SERVIDOR.txt / log-CLIENTE.txt
+- Autoarranque: se registra con Windows ( HKCU\...\Run ) para
+  abrirse minimizado cuando enciendan la computadora.
+- Para cambiar el puerto: cámbialo en ambos programas y dale a
+  "Aplicar cambios" + "Abrir en el Firewall" en el SERVIDOR.
