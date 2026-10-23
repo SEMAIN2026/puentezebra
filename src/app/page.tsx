@@ -649,6 +649,49 @@ function UploadForm({ onDone }: { onDone: () => Promise<void> | void }) {
   const [servidorFile, setServidorFile] = useState<File | null>(null);
   const [clienteFile, setClienteFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [progress, setProgress] = useState<{
+    phase: "idle" | "uploading" | "finalizing" | "done";
+    current: number; // bytes uploaded
+    total: number; // total bytes
+    label: string;
+  }>({ phase: "idle", current: 0, total: 0, label: "" });
+
+  const CHUNK_SIZE = 3 * 1024 * 1024; // 3MB per chunk (safe under Vercel 4.5MB)
+
+  const uploadFileInChunks = async (
+    sessionId: string,
+    file: File,
+    fileIndex: number
+  ): Promise<void> => {
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const blob = file.slice(start, end);
+      const form = new FormData();
+      form.append("sessionId", sessionId);
+      form.append("fileIndex", String(fileIndex));
+      form.append("chunkIndex", String(i));
+      form.append("totalChunks", String(totalChunks));
+      form.append("filename", file.name);
+      form.append("chunk", blob, `chunk-${i}.bin`);
+      const res = await fetch("/api/admin/upload-chunk", {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(
+          data.error ?? `Error subiendo chunk ${i} del archivo ${fileIndex}`
+        );
+      }
+      setProgress((p) => ({
+        ...p,
+        current: p.current + (end - start),
+        label: `Subiendo ${fileIndex === 0 ? "SERVIDOR" : "CLIENTE"} — chunk ${i + 1}/${totalChunks}`,
+      }));
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -660,25 +703,37 @@ function UploadForm({ onDone }: { onDone: () => Promise<void> | void }) {
       toast.error("Debes adjuntar ambos archivos .exe");
       return;
     }
+    if (!/^\d+\.\d+\.\d+$/.test(version)) {
+      toast.error("La versión debe tener formato X.Y.Z (ej. 1.2.0)");
+      return;
+    }
     setSubmitting(true);
+    const totalBytes = servidorFile.size + clienteFile.size;
+    setProgress({ phase: "uploading", current: 0, total: totalBytes, label: "Iniciando…" });
+    const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     try {
-      const form = new FormData();
-      form.append("version", version);
-      form.append("releaseDate", releaseDate);
-      form.append("changelog", changelog);
-      form.append("isLatest", isLatest ? "1" : "0");
-      form.append("servidorFile", servidorFile);
-      form.append("clienteFile", clienteFile);
-
-      const res = await fetch("/api/admin/upload", {
+      // Upload SERVIDOR chunks
+      await uploadFileInChunks(sessionId, servidorFile, 0);
+      // Upload CLIENTE chunks
+      await uploadFileInChunks(sessionId, clienteFile, 1);
+      // Finalize
+      setProgress((p) => ({ ...p, phase: "finalizing", label: "Subiendo a GitHub Releases…" }));
+      const res = await fetch("/api/admin/upload-finalize", {
         method: "POST",
-        body: form,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          version,
+          releaseDate,
+          changelog,
+          isLatest,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "Error al subir la versión");
-        return;
+        throw new Error(data.error ?? "Error al finalizar la subida");
       }
+      setProgress({ phase: "done", current: totalBytes, total: totalBytes, label: "¡Listo!" });
       toast.success(`Versión ${version} publicada correctamente`);
       // reset
       setVersion("");
@@ -686,13 +741,21 @@ function UploadForm({ onDone }: { onDone: () => Promise<void> | void }) {
       setServidorFile(null);
       setClienteFile(null);
       setIsLatest(true);
+      setProgress({ phase: "idle", current: 0, total: 0, label: "" });
       await onDone();
     } catch (e) {
-      toast.error("Error de red al subir");
+      const msg = e instanceof Error ? e.message : "Error de red al subir";
+      toast.error(msg);
+      setProgress({ phase: "idle", current: 0, total: 0, label: "" });
     } finally {
       setSubmitting(false);
     }
   };
+
+  const pct =
+    progress.total > 0
+      ? Math.min(100, Math.round((progress.current / progress.total) * 100))
+      : 0;
 
   return (
     <form onSubmit={submit} className="space-y-4">
@@ -705,6 +768,7 @@ function UploadForm({ onDone }: { onDone: () => Promise<void> | void }) {
             onChange={(e) => setVersion(e.target.value)}
             placeholder="1.0.0"
             className="font-mono"
+            disabled={submitting}
           />
           <p className="text-xs text-zinc-500">Formato: X.Y.Z (ej. 1.2.0)</p>
         </div>
@@ -715,6 +779,7 @@ function UploadForm({ onDone }: { onDone: () => Promise<void> | void }) {
             type="date"
             value={releaseDate}
             onChange={(e) => setReleaseDate(e.target.value)}
+            disabled={submitting}
           />
         </div>
       </div>
@@ -728,6 +793,7 @@ function UploadForm({ onDone }: { onDone: () => Promise<void> | void }) {
           placeholder={"Qué cambió en esta versión...\n- Mejora X\n- Corrección Y"}
           rows={6}
           className="font-mono text-sm"
+          disabled={submitting}
         />
       </div>
 
@@ -736,11 +802,13 @@ function UploadForm({ onDone }: { onDone: () => Promise<void> | void }) {
           label="PuenteZebra-SERVIDOR.exe *"
           file={servidorFile}
           onChange={setServidorFile}
+          disabled={submitting}
         />
         <FileInput
           label="PuenteZebra-CLIENTE.exe *"
           file={clienteFile}
           onChange={setClienteFile}
+          disabled={submitting}
         />
       </div>
 
@@ -753,14 +821,42 @@ function UploadForm({ onDone }: { onDone: () => Promise<void> | void }) {
             Aparecerá destacada en la página pública.
           </p>
         </div>
-        <Switch id="latest" checked={isLatest} onCheckedChange={setIsLatest} />
+        <Switch
+          id="latest"
+          checked={isLatest}
+          onCheckedChange={setIsLatest}
+          disabled={submitting}
+        />
       </div>
+
+      {submitting && (
+        <div className="space-y-2 rounded-lg bg-zinc-50 border border-zinc-200 p-4">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium">{progress.label}</span>
+            <span className="font-mono text-zinc-500">{pct}%</span>
+          </div>
+          <div className="h-2 bg-zinc-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-zinc-900 transition-all duration-200"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <p className="text-xs text-zinc-500">
+            {progress.phase === "finalizing"
+              ? "Reensamblando y subiendo a GitHub…"
+              : `${(progress.current / 1024 / 1024).toFixed(1)} / ${(progress.total / 1024 / 1024).toFixed(1)} MB subidos`}
+          </p>
+        </div>
+      )}
 
       <DialogFooter>
         <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
           {submitting ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Subiendo a GitHub…
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              {progress.phase === "finalizing"
+                ? "Finalizando…"
+                : "Subiendo…"}
             </>
           ) : (
             <>
@@ -777,19 +873,26 @@ function FileInput({
   label,
   file,
   onChange,
+  disabled,
 }: {
   label: string;
   file: File | null;
   onChange: (f: File | null) => void;
+  disabled?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
       <div
-        className="border-2 border-dashed border-zinc-300 rounded-lg p-4 text-center cursor-pointer hover:border-zinc-400 transition-colors"
-        onClick={() => inputRef.current?.click()}
+        className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+          disabled
+            ? "border-zinc-200 bg-zinc-50 cursor-not-allowed opacity-60"
+            : "border-zinc-300 cursor-pointer hover:border-zinc-400"
+        }`}
+        onClick={() => !disabled && inputRef.current?.click()}
         onDrop={(e) => {
+          if (disabled) return;
           e.preventDefault();
           const f = e.dataTransfer.files[0];
           if (f) onChange(f);
@@ -801,6 +904,7 @@ function FileInput({
           type="file"
           accept=".exe,application/vnd.microsoft.portable-executable,application/x-msdownload"
           className="hidden"
+          disabled={disabled}
           onChange={(e) => onChange(e.target.files?.[0] ?? null)}
         />
         {file ? (
