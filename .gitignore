@@ -1,2 +1,62 @@
-skills/
+# Dependencies
 node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Next.js
+.next/
+out/
+dev.log
+server.log
+
+# Production
+build/
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Local env files
+.env
+.env*.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.vscode/
+.idea/
+
+# Project artifacts
+download/
+scripts/build.sh
+scripts/gen_icon.py
+scripts/verify_exe.py
+scripts/turso_init.mjs
+scripts/github_release.mjs
+scripts/seed_version.mjs
+
+# Project subdirs (not web)
+tools/
+tests/
+puentezebra/
+examples/
+
+# Caddy
+Caddyfile
+
+# zscripts
+.zscripts/
