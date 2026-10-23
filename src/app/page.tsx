@@ -1116,6 +1116,17 @@ function Footer() {
           </a>
           <span className="opacity-50">·</span>
           <span>Powered by Vercel + Turso + GitHub</span>
+          <span className="opacity-50">·</span>
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              aria-hidden
+              className="w-1.5 h-1.5 rounded-full bg-zinc-900"
+            />
+            Creado por{" "}
+            <span className="font-semibold text-zinc-900">
+              Walter Piñera
+            </span>
+          </span>
         </div>
       </div>
     </footer>
