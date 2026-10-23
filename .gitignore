@@ -42,11 +42,14 @@ next-env.d.ts
 
 # Project artifacts
 download/
+scripts/*.png
+scripts/*.log
 scripts/build.sh
 scripts/gen_icon.py
 scripts/verify_exe.py
 scripts/turso_init.mjs
 scripts/github_release.mjs
+scripts/github_upload_assets.mjs
 scripts/seed_version.mjs
 
 # Project subdirs (not web)
