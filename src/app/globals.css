@@ -130,3 +130,64 @@
     background: oklch(0.85 0.12 220);
   }
 }
+
+/* ----- Animaciones del sitio (recomendado por el rediseño) ----- */
+
+@keyframes drift-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(46px, -34px) scale(1.1); }
+}
+@keyframes drift-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-40px, 30px) scale(1.08); }
+}
+@keyframes drift-c {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(24px, 26px) scale(0.94); }
+}
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}
+@keyframes floaty-x {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(6px, -6px); }
+}
+@keyframes feed {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(7px); }
+}
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.25); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-drift-a { animation: drift-a 19s ease-in-out infinite; }
+.animate-drift-b { animation: drift-b 23s ease-in-out infinite; }
+.animate-drift-c { animation: drift-c 27s ease-in-out infinite; }
+.animate-floaty { animation: floaty 6s ease-in-out infinite; }
+.animate-floaty-slow { animation: floaty 9s ease-in-out infinite; }
+.animate-floaty-x { animation: floaty-x 7s ease-in-out infinite; }
+.animate-feed { animation: feed 3.6s ease-in-out infinite; }
+.animate-glow-pulse { animation: glow-pulse 3.4s ease-in-out infinite; }
+
+.text-shimmer {
+  background: linear-gradient(110deg, #7dd3fc 20%, #ffffff 40%, #a5b4fc 60%, #7dd3fc 80%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-drift-a, .animate-drift-b, .animate-drift-c,
+  .animate-floaty, .animate-floaty-slow, .animate-floaty-x,
+  .animate-feed, .animate-glow-pulse, .text-shimmer {
+    animation: none;
+  }
+}

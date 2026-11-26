@@ -50,20 +50,18 @@ import {
   ChevronRight,
   Trash2,
   Star,
-  Pencil,
   Github,
   ExternalLink,
   Info,
   Wifi,
   Zap,
-  ArrowRight,
   CheckCircle2,
   FileText,
-  ScanLine,
   RefreshCw,
   MousePointerClick,
   Network,
-  BadgeCheck,
+  HardDriveDownload,
+  CircleCheck,
 } from "lucide-react";
 import QRCode from "qrcode";
 
@@ -149,7 +147,7 @@ export default function Home() {
     apkVersions.find((v) => v.is_latest === 1) ?? apkVersions[0] ?? null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F5F7FB] text-zinc-900">
+    <div className="min-h-screen flex flex-col bg-[#F4F7FC] text-zinc-900">
       <Header
         authed={authed}
         onLogout={async () => {
@@ -199,18 +197,63 @@ export default function Home() {
   );
 }
 
+/* ---------------- Reveal on scroll ---------------- */
+
+function Reveal({
+  children,
+  delay = 0,
+  className,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setShown(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setShown(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.12 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div
+      ref={ref}
+      className={`${className ?? ""} transition-all duration-700 ease-out will-change-transform ${
+        shown ? "opacity-100 translate-y-0" : "opacity-0 translate-y-7"
+      }`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+}
+
 /* ---------------- Header ---------------- */
 
 function Logo({ size = 36 }: { size?: number }) {
   return (
     <div
-      className="relative rounded-xl overflow-hidden grid place-items-center font-black text-white select-none"
+      className="relative rounded-xl overflow-hidden grid place-items-center font-black text-white select-none shrink-0"
       style={{ width: size, height: size, fontSize: size * 0.36 }}
       aria-hidden
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-sky-400 to-sky-700" />
+      <div className="absolute inset-0 bg-gradient-to-br from-sky-400 via-sky-600 to-indigo-700" />
       <div
-        className="absolute inset-0 opacity-60"
+        className="absolute inset-0 opacity-50"
         style={{
           backgroundImage:
             "repeating-linear-gradient(115deg, rgba(0,0,0,0.85) 0 7px, transparent 7px 18px)",
@@ -231,12 +274,12 @@ function Header({
   onAdminClick: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/75 border-b border-zinc-200/70">
+    <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-zinc-200/70 shadow-sm shadow-zinc-900/[0.03]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
         <a href="#" className="flex items-center gap-3 group">
-          <Logo size={38} />
+          <Logo size={40} />
           <span className="leading-tight">
-            <span className="block font-bold tracking-tight text-[15px]">
+            <span className="block font-bold tracking-tight text-[15px] group-hover:text-sky-700 transition-colors">
               PuenteZebra
             </span>
             <span className="hidden sm:block text-[11px] text-zinc-500">
@@ -244,6 +287,32 @@ function Header({
             </span>
           </span>
         </a>
+        <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
+          <a
+            href="#como-funciona"
+            className="px-3 py-1.5 rounded-lg text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+          >
+            Cómo funciona
+          </a>
+          <a
+            href="#descargas"
+            className="px-3 py-1.5 rounded-lg text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+          >
+            Descargas
+          </a>
+          <a
+            href="#apk"
+            className="px-3 py-1.5 rounded-lg text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+          >
+            Android
+          </a>
+          <a
+            href="#faq"
+            className="px-3 py-1.5 rounded-lg text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+          >
+            Preguntas
+          </a>
+        </nav>
         <div className="flex items-center gap-1.5">
           <a
             href="https://github.com/SEMAIN2026/puentezebra"
@@ -293,10 +362,11 @@ function PublicView({
   return (
     <div className="space-y-16 sm:space-y-20">
       <Hero latest={latest} loading={loading} />
+      <StatsStrip />
       <HowItWorks />
       <section id="descargas" className="space-y-6">
         <SectionHeading
-          icon={<Download className="w-5 h-5" />}
+          icon={<HardDriveDownload className="w-5 h-5" />}
           title="Descargas para Windows"
           subtitle="Los dos ejecutables de la última versión, listos para copiar en cada PC."
         />
@@ -336,22 +406,27 @@ function Hero({
   loading: boolean;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-3xl bg-[#0B1526] text-white px-6 sm:px-12 py-14 sm:py-20 shadow-2xl shadow-[#0B1526]/30">
-      {/* Luces de fondo */}
+    <section className="relative overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] bg-[#0A1220] text-white px-6 sm:px-10 lg:px-14 py-14 sm:py-16 lg:py-20 shadow-2xl shadow-[#0A1220]/40">
+      {/* Aurora animada */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-32 -left-24 h-96 w-96 rounded-full bg-sky-500/30 blur-3xl"
+        className="pointer-events-none absolute -top-40 -left-32 h-[30rem] w-[30rem] rounded-full bg-sky-500/25 blur-3xl animate-drift-a"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -bottom-40 -right-20 h-[28rem] w-[28rem] rounded-full bg-cyan-400/20 blur-3xl"
+        className="pointer-events-none absolute -bottom-48 -right-24 h-[32rem] w-[32rem] rounded-full bg-indigo-500/25 blur-3xl animate-drift-b"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-40"
+        className="pointer-events-none absolute top-1/3 left-1/2 h-72 w-72 rounded-full bg-cyan-400/15 blur-3xl animate-drift-c"
+      />
+      {/* Malla de puntos */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.35]"
         style={{
           backgroundImage:
-            "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.35) 1px, transparent 0)",
+            "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.4) 1px, transparent 0)",
           backgroundSize: "26px 26px",
         }}
       />
@@ -365,67 +440,238 @@ function Hero({
         }}
       />
 
-      <div className="relative max-w-2xl">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-medium text-sky-100 backdrop-blur">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-          </span>
-          {loading
-            ? "Cargando…"
-            : latest
-              ? `Última versión: v${latest.version} · ${formatDate(latest.release_date)}`
-              : "Sin versiones todavía"}
-        </div>
-
-        <h1 className="mt-6 text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.08]">
-          Imprime en tu{" "}
-          <span className="bg-gradient-to-r from-sky-300 via-cyan-200 to-sky-400 bg-clip-text text-transparent">
-            Zebra ZD220
-          </span>{" "}
-          desde cualquier equipo de la oficina
-        </h1>
-
-        <p className="mt-5 text-base sm:text-lg text-sky-100/70 max-w-xl leading-relaxed">
-          Dos ejecutables, cero complicaciones: el SERVIDOR se queda con la
-          impresora y los demás PCs imprimen con una impresora virtual. También
-          desde el teléfono con la app Android.
-        </p>
-
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <Button asChild size="lg" className="bg-white text-zinc-900 hover:bg-sky-100 h-12 px-6 text-base rounded-xl shadow-lg">
-            <a href="#descargas">
-              <Download className="w-5 h-5 mr-2" />
-              Descargar para Windows
-            </a>
-          </Button>
-          <Button
-            asChild
-            size="lg"
-            variant="outline"
-            className="border-white/25 bg-white/5 text-white hover:bg-white/10 hover:border-white/40 h-12 px-6 text-base rounded-xl"
-          >
-            <a href="#apk">
-              <Smartphone className="w-5 h-5 mr-2" />
-              App Android
-            </a>
-          </Button>
-        </div>
-
-        <div className="mt-9 flex flex-wrap gap-x-5 gap-y-2.5 text-sm text-sky-100/80">
-          {[
-            { icon: <Monitor className="w-4 h-4" />, label: "Windows 10/11 64-bit" },
-            { icon: <Wifi className="w-4 h-4" />, label: "Red local, sin internet" },
-            { icon: <Printer className="w-4 h-4" />, label: "Zebra ZD220 + hoja carta" },
-            { icon: <Zap className="w-4 h-4" />, label: "Instalación en minutos" },
-          ].map((f, i) => (
-            <span key={i} className="inline-flex items-center gap-1.5">
-              <span className="text-sky-300">{f.icon}</span>
-              {f.label}
+      <div className="relative grid lg:grid-cols-[1.15fr_1fr] gap-10 lg:gap-6 items-center">
+        <div className="max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-medium text-sky-100 backdrop-blur">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             </span>
-          ))}
+            {loading
+              ? "Cargando…"
+              : latest
+                ? `Windows v${latest.version} · actualizada ${formatDate(latest.release_date)}`
+                : "Sin versiones todavía"}
+          </div>
+
+          <h1 className="mt-6 text-4xl sm:text-5xl md:text-[3.4rem] font-bold tracking-tight leading-[1.07]">
+            Imprime en tu{" "}
+            <span className="text-shimmer">Zebra ZD220</span>{" "}
+            desde cualquier equipo de la oficina
+          </h1>
+
+          <p className="mt-5 text-base sm:text-lg text-sky-100/75 max-w-xl leading-relaxed">
+            Dos ejecutables, cero complicaciones: el{" "}
+            <strong className="text-white font-semibold">SERVIDOR</strong> se
+            queda con la impresora y los demás PCs imprimen con una{" "}
+            <strong className="text-white font-semibold">
+              impresora virtual
+            </strong>
+            . También desde el teléfono con la app Android.
+          </p>
+
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Button
+              asChild
+              size="lg"
+              className="bg-white text-zinc-900 hover:bg-sky-50 h-12 px-6 text-base rounded-xl shadow-lg shadow-sky-900/40"
+            >
+              <a href="#descargas">
+                <Download className="w-5 h-5 mr-2" />
+                Descargar para Windows
+              </a>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="border-white/25 bg-white/5 text-white hover:bg-white/10 hover:border-white/40 h-12 px-6 text-base rounded-xl backdrop-blur"
+            >
+              <a href="#apk">
+                <Smartphone className="w-5 h-5 mr-2" />
+                App Android
+              </a>
+            </Button>
+          </div>
+
+          <div className="mt-9 flex flex-wrap gap-x-5 gap-y-2.5 text-sm text-sky-100/80">
+            {[
+              { icon: <Monitor className="w-4 h-4" />, label: "Windows 10/11 64-bit" },
+              { icon: <Wifi className="w-4 h-4" />, label: "Red local, sin internet" },
+              { icon: <Printer className="w-4 h-4" />, label: "Zebra ZD220 + hoja carta" },
+              { icon: <Zap className="w-4 h-4" />, label: "Instalación en minutos" },
+            ].map((f, i) => (
+              <span key={i} className="inline-flex items-center gap-1.5">
+                <span className="text-sky-300">{f.icon}</span>
+                {f.label}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <PrinterMockup />
+      </div>
+    </section>
+  );
+}
+
+/* Maqueta CSS de la impresora sacando una etiqueta */
+
+function PrinterMockup() {
+  return (
+    <div className="relative hidden lg:flex items-center justify-center py-6">
+      <div
+        aria-hidden
+        className="absolute w-[24rem] h-[24rem] rounded-full bg-sky-500/20 blur-3xl"
+      />
+      {/* Chip flotante: red local */}
+      <div className="absolute -left-2 top-2 z-10 animate-floaty">
+        <div className="flex items-center gap-2.5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md px-4 py-2.5 shadow-lg">
+          <span className="w-8 h-8 rounded-xl bg-sky-400/20 grid place-items-center text-sky-300">
+            <Wifi className="w-4 h-4" />
+          </span>
+          <div className="text-[11px] leading-tight">
+            <div className="font-semibold text-white">Red local</div>
+            <div className="text-white/60">Wi-Fi de la oficina</div>
+          </div>
         </div>
       </div>
+      {/* Chip flotante: trabajo recibido */}
+      <div className="absolute -right-1 top-24 z-10 animate-floaty-slow">
+        <div className="flex items-center gap-2.5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md px-4 py-2.5 shadow-lg">
+          <span className="w-8 h-8 rounded-xl bg-emerald-400/20 grid place-items-center text-emerald-300">
+            <CheckCircle2 className="w-4 h-4" />
+          </span>
+          <div className="text-[11px] leading-tight">
+            <div className="font-semibold text-white">Trabajo recibido</div>
+            <div className="text-white/60">Enviado a la ZD220</div>
+          </div>
+        </div>
+      </div>
+      {/* Chip flotante: teléfono */}
+      <div className="absolute -bottom-2 -left-6 z-10 animate-floaty-x">
+        <div className="flex items-center gap-2.5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md px-4 py-2.5 shadow-lg">
+          <span className="w-8 h-8 rounded-xl bg-indigo-400/20 grid place-items-center text-indigo-300">
+            <Smartphone className="w-4 h-4" />
+          </span>
+          <div className="text-[11px] leading-tight">
+            <div className="font-semibold text-white">Desde el teléfono</div>
+            <div className="text-white/60">Fotos, PDF, WhatsApp</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Impresora */}
+      <div className="relative w-[290px]">
+        <div className="rounded-3xl bg-gradient-to-b from-zinc-700 via-zinc-800 to-zinc-900 p-4 shadow-2xl ring-1 ring-white/10">
+          {/* Ranura superior */}
+          <div className="mx-3 mb-4 h-2.5 rounded-full bg-black/70 shadow-inner" />
+          {/* Etiqueta saliendo */}
+          <div className="rounded-2xl bg-[#0B1526] ring-1 ring-white/5 p-4">
+            <div className="animate-feed">
+              <div className="rounded-xl bg-white p-3 shadow-lg relative overflow-hidden">
+                <div
+                  aria-hidden
+                  className="absolute right-0 top-0 h-full w-8 opacity-[0.12]"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(45deg, #111 0 5px, transparent 5px 10px)",
+                  }}
+                />
+                <div className="text-[8px] font-mono text-zinc-400">
+                  2026-11-27 · SEMAIN2026
+                </div>
+                <div className="text-[11px] font-bold tracking-widest text-zinc-800 mt-0.5">
+                  PUENTEZEBRA
+                </div>
+                {/* Código de barras */}
+                <div
+                  className="mt-2 h-10 w-full"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(90deg, #111 0 2px, transparent 2px 4px, #111 4px 5px, transparent 5px 9px, #111 9px 12px, transparent 12px 14px)",
+                  }}
+                />
+                <div className="mt-1 font-mono text-[9px] text-zinc-500 tracking-[0.25em]">
+                  PZ-2026-MX
+                </div>
+              </div>
+            </div>
+          </div>
+ {/* Panel inferior de la impresora */}
+          <div className="mt-4 mx-1 flex items-center justify-between">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 animate-glow-pulse" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+            </span>
+            <span className="text-[9px] font-mono text-white/40 tracking-widest">
+              ZD220 · 203 dpi
+            </span>
+            <div className="flex gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-white/25" />
+              <span className="w-1.5 h-1.5 rounded-full bg-white/25" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Tira de datos ---------------- */
+
+function StatsStrip() {
+  const stats = [
+    {
+      icon: <Printer className="w-5 h-5" />,
+      num: "2",
+      label: "impresoras en red",
+      detail: "etiquetas ZD220 + hoja carta",
+      color: "from-sky-500 to-cyan-500",
+    },
+    {
+      icon: <Zap className="w-5 h-5" />,
+      num: "3",
+      label: "pasos de instalación",
+      detail: "y toda la oficina imprime",
+      color: "from-indigo-500 to-violet-500",
+    },
+    {
+      icon: <Wifi className="w-5 h-5" />,
+      num: "0",
+      label: "internet y suscripciones",
+      detail: "todo viaja por la red local",
+      color: "from-emerald-500 to-teal-500",
+    },
+    {
+      icon: <Monitor className="w-5 h-5" />,
+      num: "+2",
+      label: "plataformas",
+      detail: "PCs Windows y el teléfono",
+      color: "from-amber-500 to-orange-500",
+    },
+  ];
+  return (
+    <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {stats.map((s, i) => (
+        <Reveal key={i} delay={i * 70}>
+          <div className="group h-full rounded-2xl bg-white border border-zinc-200/80 p-5 shadow-sm hover:shadow-lg hover:shadow-zinc-200/60 hover:-translate-y-0.5 transition-all">
+            <div
+              className={`w-10 h-10 rounded-xl grid place-items-center text-white bg-gradient-to-br ${s.color} shadow-md`}
+            >
+              {s.icon}
+            </div>
+            <div className="mt-3 text-3xl font-bold tracking-tight">
+              {s.num}
+              <span className="text-lg font-semibold text-zinc-400">
+                {" "}
+                {s.label}
+              </span>
+            </div>
+            <div className="text-xs text-zinc-500 mt-0.5">{s.detail}</div>
+          </div>
+        </Reveal>
+      ))}
     </section>
   );
 }
@@ -436,49 +682,63 @@ function HowItWorks() {
   const pasos = [
     {
       icon: <Server className="w-5 h-5" />,
-      titulo: "1 · En la PC de la impresora",
+      n: "1",
+      titulo: "En la PC de la impresora",
       texto:
         "Descarga y ejecuta el SERVIDOR. Elige tu Zebra ZD220 y abre el puerto del firewall: ya escucha trabajos de toda la red.",
-      color: "bg-sky-100 text-sky-700",
+      color: "from-sky-500 to-sky-600",
+      sombra: "shadow-sky-500/30",
     },
     {
       icon: <Monitor className="w-5 h-5" />,
-      titulo: "2 · En los demás PCs",
+      n: "2",
+      titulo: "En los demás PCs",
       texto:
         "Cada compañero ejecuta el CLIENTE y pulsa “Instalar impresora virtual”. Aparece “Zebra ZD220 (Red)” como una impresora más.",
-      color: "bg-cyan-100 text-cyan-700",
+      color: "from-indigo-500 to-indigo-600",
+      sombra: "shadow-indigo-500/30",
     },
     {
       icon: <Printer className="w-5 h-5" />,
-      titulo: "3 · Imprime desde donde sea",
+      n: "3",
+      titulo: "Imprime desde donde sea",
       texto:
         "Word, Excel, el navegador, el escáner… cualquier programa imprime y el trabajo sale en la Zebra del SERVIDOR.",
-      color: "bg-emerald-100 text-emerald-700",
+      color: "from-emerald-500 to-emerald-600",
+      sombra: "shadow-emerald-500/30",
     },
   ];
   return (
-    <section className="space-y-6">
+    <section id="como-funciona" className="space-y-6">
       <SectionHeading
         icon={<Network className="w-5 h-5" />}
         title="¿Cómo funciona?"
         subtitle="Tres pasos y la oficina imprime en la misma Zebra desde cualquier equipo."
       />
-      <div className="grid sm:grid-cols-3 gap-4">
+      <div className="relative grid sm:grid-cols-3 gap-4 sm:gap-5">
         {pasos.map((p, i) => (
-          <Card
-            key={i}
-            className="group border-zinc-200/80 rounded-2xl hover:shadow-lg hover:shadow-zinc-200/60 hover:-translate-y-0.5 transition-all bg-white"
-          >
-            <CardContent className="pt-6">
+          <Reveal key={i} delay={i * 90} className="h-full">
+            <div className="group relative h-full rounded-2xl bg-white border border-zinc-200/80 p-6 shadow-sm hover:shadow-xl hover:shadow-zinc-200/70 hover:-translate-y-1 transition-all overflow-hidden">
               <div
-                className={`w-11 h-11 rounded-xl grid place-items-center mb-4 ${p.color}`}
-              >
-                {p.icon}
+                aria-hidden
+                className={`absolute -top-10 -right-10 w-28 h-28 rounded-full bg-gradient-to-br ${p.color} opacity-[0.07] group-hover:opacity-[0.14] transition-opacity blur-xl`}
+              />
+              <div className="flex items-center justify-between mb-4">
+                <div
+                  className={`w-12 h-12 rounded-2xl grid place-items-center text-white bg-gradient-to-br ${p.color} shadow-lg ${p.sombra}`}
+                >
+                  {p.icon}
+                </div>
+                <span className="text-5xl font-black text-zinc-100 select-none group-hover:text-zinc-200 transition-colors">
+                  {p.n}
+                </span>
               </div>
               <div className="font-bold text-[15px] mb-1.5">{p.titulo}</div>
-              <p className="text-sm text-zinc-600 leading-relaxed">{p.texto}</p>
-            </CardContent>
-          </Card>
+              <p className="text-sm text-zinc-600 leading-relaxed">
+                {p.texto}
+              </p>
+            </div>
+          </Reveal>
         ))}
       </div>
     </section>
@@ -498,7 +758,7 @@ function SectionHeading({
 }) {
   return (
     <div className="flex items-start gap-3.5">
-      <div className="w-10 h-10 rounded-xl bg-zinc-900 grid place-items-center text-white shrink-0 mt-0.5">
+      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-zinc-900 to-zinc-700 grid place-items-center text-white shrink-0 mt-0.5 shadow-md">
         {icon}
       </div>
       <div>
@@ -515,32 +775,45 @@ function SectionHeading({
 
 /* ---------------- Última versión ---------------- */
 
+function WindowsLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M3 5.5 10.5 4.4v7.1H3V5.5Zm8.5-1.3L21 2.8v8.7h-9.5V4.2ZM3 12.5h7.5v7.1L3 18.5v-6Zm8.5 0H21v8.7l-9.5-1.4v-7.3Z" />
+    </svg>
+  );
+}
+
 function LatestDownloadCard({ version }: { version: VersionRow }) {
   return (
     <Card className="overflow-hidden border-zinc-200/80 rounded-3xl shadow-xl shadow-zinc-900/5 bg-white">
-      <div className="relative bg-gradient-to-br from-[#0B1526] via-[#12263F] to-[#0B1526] text-white px-6 sm:px-8 py-7 flex items-center justify-between flex-wrap gap-4">
+      <div className="relative bg-gradient-to-br from-[#0A1220] via-[#10203C] to-[#0A1220] text-white px-6 sm:px-8 py-7 flex items-center justify-between flex-wrap gap-4">
         <div
           aria-hidden
-          className="absolute inset-0 opacity-[0.08]"
+          className="absolute inset-0 opacity-[0.07]"
           style={{
             backgroundImage:
               "repeating-linear-gradient(115deg, #fff 0 12px, transparent 12px 28px)",
           }}
         />
-        <div className="relative">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-sky-300/80 mb-1.5 font-semibold">
-            Última versión para Windows
+        <div className="relative flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/15 grid place-items-center">
+            <WindowsLogo className="w-7 h-7 text-sky-200" />
           </div>
-          <div className="text-3xl sm:text-4xl font-bold font-mono tracking-tight">
-            v{version.version}
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.18em] text-sky-300/80 mb-1 font-semibold">
+              Última versión para Windows
+            </div>
+            <div className="text-3xl sm:text-4xl font-bold font-mono tracking-tight">
+              v{version.version}
+            </div>
           </div>
         </div>
         <div className="relative text-right text-sm text-sky-100/70">
-          <div className="flex items-center gap-1.5 justify-end">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-400/15 border border-emerald-400/25 text-emerald-300 font-medium">
             <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
             Recomendada
           </div>
-          <div className="mt-1">Publicada {formatDate(version.release_date)}</div>
+          <div className="mt-1.5">Publicada {formatDate(version.release_date)}</div>
         </div>
       </div>
       <CardContent className="p-6 sm:p-8 space-y-6">
@@ -572,7 +845,7 @@ function LatestDownloadCard({ version }: { version: VersionRow }) {
           />
         </div>
         <p className="text-xs text-zinc-500 flex items-center gap-1.5">
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+          <CircleCheck className="w-3.5 h-3.5 text-emerald-500" />
           Ambos son ejecutables independientes: no requieren instalación ni
           permisos de administrador para ejecutarse.
         </p>
@@ -600,13 +873,23 @@ function DownloadTile({
     <a
       href={href}
       download
-      className={`group block rounded-2xl border p-6 transition-all hover:-translate-y-1 hover:shadow-xl ${
+      className={`group relative block overflow-hidden rounded-2xl border p-6 transition-all hover:-translate-y-1 hover:shadow-xl ${
         primary
-          ? "border-transparent bg-gradient-to-br from-sky-500 to-sky-700 text-white hover:shadow-sky-500/30"
+          ? "border-transparent bg-gradient-to-br from-sky-500 via-sky-600 to-indigo-700 text-white hover:shadow-sky-500/30"
           : "border-zinc-200 bg-white hover:border-sky-300 hover:shadow-sky-100"
       }`}
     >
-      <div className="flex items-center justify-between mb-4">
+      {primary && (
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-[0.08]"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(115deg, #fff 0 12px, transparent 12px 28px)",
+          }}
+        />
+      )}
+      <div className="relative flex items-center justify-between mb-4">
         <div
           className={`w-12 h-12 rounded-xl grid place-items-center ${
             primary ? "bg-white/15" : "bg-sky-50 text-sky-700"
@@ -615,15 +898,17 @@ function DownloadTile({
           {icon}
         </div>
         <span
-          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${
-            primary ? "bg-white text-sky-700" : "bg-zinc-900 text-white"
-          } group-hover:gap-2.5 transition-all`}
+          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-full transition-all ${
+            primary
+              ? "bg-white text-sky-700 group-hover:gap-2.5"
+              : "bg-zinc-900 text-white group-hover:gap-2.5"
+          }`}
         >
           <Download className="w-3.5 h-3.5" />
           Descargar
         </span>
       </div>
-      <div className="font-bold text-lg">{title}</div>
+      <div className="relative font-bold text-lg">{title}</div>
       <div
         className={`text-xs mt-1 mb-3 ${
           primary ? "text-sky-100/80" : "text-zinc-500"
@@ -632,11 +917,21 @@ function DownloadTile({
         {subtitle}
       </div>
       <div
-        className={`font-mono text-[11px] truncate ${
+        className={`relative font-mono text-[11px] truncate ${
           primary ? "text-sky-200/70" : "text-zinc-400"
         }`}
       >
         {filename}
+      </div>
+      <div className="relative mt-4 flex items-center gap-1.5">
+        <WindowsLogo
+          className={`w-3.5 h-3.5 ${primary ? "text-sky-200" : "text-zinc-400"}`}
+        />
+        <span
+          className={`text-[11px] ${primary ? "text-sky-100/70" : "text-zinc-500"}`}
+        >
+          Windows 10/11 · 64 bits
+        </span>
       </div>
     </a>
   );
@@ -669,6 +964,7 @@ function OlderVersions({ older }: { older: VersionRow[] }) {
                 <span className="text-sm text-zinc-500">
                   {formatDate(v.release_date)}
                 </span>
+                <ChevronRight className="w-4 h-4 ml-auto text-zinc-300" />
               </div>
             </AccordionTrigger>
             <AccordionContent className="pb-4">
@@ -716,7 +1012,8 @@ function InstructionsSection() {
         subtitle="Cinco minutos por PC y queda funcionando para siempre."
       />
       <div className="grid sm:grid-cols-2 gap-4">
-        <Card className="border-zinc-200/80 rounded-2xl bg-white">
+        <Card className="border-zinc-200/80 rounded-2xl bg-white overflow-hidden">
+          <div className="h-1.5 bg-gradient-to-r from-sky-500 to-sky-600" />
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2.5 text-base">
               <span className="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 grid place-items-center shrink-0">
@@ -746,10 +1043,11 @@ function InstructionsSection() {
             </Paso>
           </CardContent>
         </Card>
-        <Card className="border-zinc-200/80 rounded-2xl bg-white">
+        <Card className="border-zinc-200/80 rounded-2xl bg-white overflow-hidden">
+          <div className="h-1.5 bg-gradient-to-r from-indigo-500 to-indigo-600" />
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2.5 text-base">
-              <span className="w-9 h-9 rounded-xl bg-cyan-100 text-cyan-700 grid place-items-center shrink-0">
+              <span className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 grid place-items-center shrink-0">
                 <Monitor className="w-4 h-4" />
               </span>
               En el PC del compañero (CLIENTE)
@@ -798,7 +1096,7 @@ function Paso({
 }) {
   return (
     <div className={`flex gap-3 ${ultimo ? "" : "pb-3 mb-3 border-b border-zinc-100"}`}>
-      <span className="w-6 h-6 rounded-full bg-zinc-900 text-white text-xs font-bold grid place-items-center shrink-0 mt-0.5">
+      <span className="w-6 h-6 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-950 text-white text-xs font-bold grid place-items-center shrink-0 mt-0.5">
         {n}
       </span>
       <p className="leading-relaxed">{children}</p>
@@ -839,7 +1137,11 @@ function AndroidSection({
         subtitle="Imprime desde el teléfono con la misma red Wi-Fi de la oficina, incluida la impresora virtual del sistema."
       />
       <Card className="border-zinc-200/80 rounded-3xl overflow-hidden bg-white shadow-lg shadow-zinc-900/5">
-        <div className="relative bg-gradient-to-br from-[#0B1526] via-[#13294a] to-[#0B1526] text-white px-6 sm:px-8 py-6">
+        <div className="relative bg-gradient-to-br from-[#0A1220] via-[#13294A] to-[#0A1220] text-white px-6 sm:px-8 py-6">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-16 -right-10 h-56 w-56 rounded-full bg-sky-500/20 blur-3xl"
+          />
           <div
             aria-hidden
             className="absolute inset-0 opacity-[0.07]"
@@ -869,7 +1171,7 @@ function AndroidSection({
             )}
           </div>
         </div>
-        <CardContent className="p-6 sm:p-8 grid sm:grid-cols-[1fr_auto] gap-8 items-start">
+        <CardContent className="p-6 sm:p-8 grid lg:grid-cols-[1.25fr_1fr] gap-8 lg:gap-10 items-start">
           <div className="space-y-5">
             <p className="text-sm text-zinc-600 leading-relaxed">
               Imprime en las dos impresoras del SERVIDOR (etiquetas Zebra y hoja
@@ -886,7 +1188,11 @@ function AndroidSection({
               </pre>
             )}
             {downloadUrl && (
-              <Button asChild size="lg" className="rounded-xl h-12 px-6 text-base bg-gradient-to-r from-sky-500 to-sky-700 hover:opacity-95 shadow-lg shadow-sky-500/25">
+              <Button
+                asChild
+                size="lg"
+                className="rounded-xl h-12 px-6 text-base bg-gradient-to-r from-sky-500 via-sky-600 to-indigo-600 hover:opacity-95 shadow-lg shadow-sky-500/30"
+              >
                 <a href={downloadUrl} download="PuenteZebra-Movil.apk">
                   <Download className="w-5 h-5 mr-2" />
                   Descargar APK (v{apk.version})
@@ -936,7 +1242,10 @@ function AndroidSection({
                   ),
                 },
               ].map((s, i) => (
-                <div key={i} className="flex gap-3 px-4 py-3 text-sm text-zinc-600">
+                <div
+                  key={i}
+                  className="flex gap-3 px-4 py-3 text-sm text-zinc-600"
+                >
                   <span className="w-7 h-7 rounded-full bg-sky-100 text-sky-700 grid place-items-center shrink-0">
                     {s.icon}
                   </span>
@@ -945,24 +1254,38 @@ function AndroidSection({
               ))}
             </div>
           </div>
-          <div className="mx-auto space-y-3 text-center">
-            <div className="p-4 rounded-3xl bg-gradient-to-br from-sky-100 to-sky-50 border border-sky-200/60 shadow-inner">
-              {qr ? (
-                <img
-                  src={qr}
-                  width={208}
-                  height={208}
-                  alt="Código QR para descargar el APK"
-                  className="rounded-xl bg-white"
+
+          {/* Maqueta del teléfono + QR */}
+          <div className="grid sm:grid-cols-[auto_1fr] lg:grid-cols-1 gap-8 items-center justify-center text-center sm:text-left lg:text-center">
+            <PhoneMockup />
+            <div className="mx-auto space-y-3">
+              <div className="relative inline-block p-4 rounded-3xl bg-gradient-to-br from-sky-100 to-indigo-100 border border-sky-200/60 shadow-inner">
+                {qr ? (
+                  <img
+                    src={qr}
+                    width={208}
+                    height={208}
+                    alt="Código QR para descargar el APK"
+                    className="rounded-xl bg-white"
+                  />
+                ) : (
+                  <div className="w-[208px] h-[208px] rounded-xl border border-dashed border-sky-300 grid place-items-center text-xs text-sky-500">
+                    Generando QR…
+                  </div>
+                )}
+                {/* Esquinas decorativas */}
+                <span
+                  aria-hidden
+                  className="absolute -top-1.5 -left-1.5 w-6 h-6 border-t-[3px] border-l-[3px] border-sky-400 rounded-tl-lg"
                 />
-              ) : (
-                <div className="w-[208px] h-[208px] rounded-xl border border-dashed border-sky-300 grid place-items-center text-xs text-sky-500">
-                  Generando QR…
-                </div>
-              )}
-            </div>
-            <div className="text-xs text-zinc-500 flex items-center gap-1.5 justify-center">
-              <QrCode className="w-3.5 h-3.5" /> Escanea con el teléfono
+                <span
+                  aria-hidden
+                  className="absolute -bottom-1.5 -right-1.5 w-6 h-6 border-b-[3px] border-r-[3px] border-indigo-400 rounded-br-lg"
+                />
+              </div>
+              <div className="text-xs text-zinc-500 flex items-center gap-1.5 justify-center">
+                <QrCode className="w-3.5 h-3.5" /> Escanea con el teléfono
+              </div>
             </div>
           </div>
         </CardContent>
@@ -970,6 +1293,90 @@ function AndroidSection({
     </section>
   );
 }
+
+/* Maqueta CSS del teléfono con la app real dentro */
+
+function PhoneMockup() {
+  return (
+    <div className="mx-auto animate-floaty-slow">
+      <div className="relative w-[236px] rounded-[2.4rem] border border-zinc-800/80 bg-zinc-950 p-2.5 shadow-2xl shadow-zinc-900/30">
+        {/* Notch */}
+        <div className="absolute left-1/2 -translate-x-1/2 top-3.5 w-16 h-4 rounded-full bg-zinc-950 z-10 border border-zinc-800/60" />
+        <div className="rounded-[1.9rem] overflow-hidden bg-[#F4F7FC] ring-1 ring-white/10">
+          {/* Barra de estado */}
+          <div className="bg-[#0A1220] px-4 pt-2.5 pb-1.5 flex items-center justify-between text-[8px] text-white/70 font-medium">
+            <span>9:41</span>
+            <span className="flex items-center gap-1">
+              <Wifi className="w-2.5 h-2.5" />
+              <span className="inline-block w-3 h-1.5 rounded-[2px] bg-white/70" />
+            </span>
+          </div>
+          {/* Encabezado de la app */}
+          <div className="bg-[#0A1220] px-3.5 pb-3.5 pt-2 flex items-center gap-2.5">
+            <Logo size={26} />
+            <div>
+              <div className="text-white text-[10px] font-bold leading-none">
+                PuenteZebra Móvil
+              </div>
+              <div className="text-[6.5px] text-sky-200/60 mt-0.5 tracking-wide">
+                v{APP_VERSION_PLACEHOLDER}
+              </div>
+            </div>
+          </div>
+          <div className="p-3 space-y-2">
+            {/* Tarjeta impresora 1 */}
+            <div className="rounded-xl border border-zinc-200 bg-white p-2.5 shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg bg-sky-100 grid place-items-center">
+                  <Printer className="w-3.5 h-3.5 text-sky-600" />
+                </span>
+                <div className="min-w-0">
+                  <div className="text-[9px] font-bold text-zinc-800">
+                    ETIQUETAS
+                  </div>
+                  <div className="text-[7px] text-zinc-500 truncate">
+                    Zebra ZD220 · puerto 9100
+                  </div>
+                </div>
+                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+              </div>
+            </div>
+            {/* Tarjeta impresora 2 */}
+            <div className="rounded-xl border border-zinc-200 bg-white p-2.5 shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg bg-indigo-100 grid place-items-center">
+                  <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                </span>
+                <div className="min-w-0">
+                  <div className="text-[9px] font-bold text-zinc-800">
+                    DOCUMENTOS
+                  </div>
+                  <div className="text-[7px] text-zinc-500 truncate">
+                    Epson L3250 · puerto 9101
+                  </div>
+                </div>
+                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+              </div>
+            </div>
+            {/* Consola de estado */}
+            <div className="rounded-xl bg-zinc-900 p-2.5 font-mono text-[7px] leading-[1.7]">
+              <div className="text-emerald-400">pz@movil:~$ listo_</div>
+              <div className="text-white/50">
+                OK conexión 192.168.88.7 · puertos abiertos
+              </div>
+            </div>
+            {/* Botón principal */}
+            <div className="h-8 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white text-[8px] font-bold grid place-items-center tracking-wide shadow-md shadow-sky-500/25">
+              IMPRIMIR PÁGINA DE PRUEBA
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const APP_VERSION_PLACEHOLDER = "1.3.3";
 
 /* ---------------- FAQ ---------------- */
 
@@ -997,7 +1404,7 @@ function FaqSection() {
     },
   ];
   return (
-    <section className="space-y-6">
+    <section id="faq" className="space-y-6">
       <SectionHeading
         icon={<Info className="w-5 h-5" />}
         title="Preguntas frecuentes"
@@ -1058,7 +1465,7 @@ function LoginView({ onSuccess }: { onSuccess: () => void }) {
     <div className="max-w-sm mx-auto pt-10">
       <Card className="border-zinc-200/80 rounded-3xl shadow-xl shadow-zinc-900/5 bg-white">
         <CardHeader className="text-center pb-2 pt-8">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500 to-sky-700 grid place-items-center text-white mb-3 shadow-lg shadow-sky-500/30">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500 via-sky-600 to-indigo-700 grid place-items-center text-white mb-3 shadow-lg shadow-sky-500/30">
             <ShieldCheck className="w-6 h-6" />
           </div>
           <CardTitle className="text-xl">Panel de administración</CardTitle>
@@ -1136,14 +1543,12 @@ function AdminView({
               <DialogHeader>
                 <DialogTitle>Publicar APK Android</DialogTitle>
                 <DialogDescription>
-                  Sube el .apk compilado con{" "}
+                  Sube el .apk compilado con el mismo keystore. Se guarda en la
+                  base de datos y, si GitHub responde, también como release{" "}
                   <code className="px-1 rounded bg-zinc-100">
-                    scripts/build_apk.sh
-                  </code>{" "}
-                  (mismo keystore). Se guarda en la base de datos y, si GitHub
-                  responde, también como release{" "}
-                  <code className="px-1 rounded bg-zinc-100">android-vX.Y.Z</code>.{" "}
-                  La app instalada lo detecta sola al abrirse.
+                    android-vX.Y.Z
+                  </code>
+                  . La app instalada lo detecta sola al abrirse.
                 </DialogDescription>
               </DialogHeader>
               <ApkUploadForm
@@ -1164,8 +1569,8 @@ function AdminView({
               <DialogHeader>
                 <DialogTitle>Publicar nueva versión</DialogTitle>
                 <DialogDescription>
-                  Sube los dos archivos .exe. Se creará un release en GitHub
-                  con tag{" "}
+                  Sube los dos archivos .exe. Se creará un release en GitHub con
+                  tag{" "}
                   <code className="px-1 rounded bg-zinc-100">vX.Y.Z</code> y se
                   añadirá el registro en la base de datos.
                 </DialogDescription>
@@ -1202,12 +1607,12 @@ function UploadForm({ onDone }: { onDone: () => Promise<void> | void }) {
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState<{
     phase: "idle" | "uploading" | "finalizing" | "done";
-    current: number; // bytes uploaded
-    total: number; // total bytes
+    current: number;
+    total: number;
     label: string;
   }>({ phase: "idle", current: 0, total: 0, label: "" });
 
-  const CHUNK_SIZE = 3 * 1024 * 1024; // 3MB per chunk (safe under Vercel 4.5MB)
+  const CHUNK_SIZE = 3 * 1024 * 1024;
 
   const uploadFileInChunks = async (
     sessionId: string,
@@ -1263,11 +1668,8 @@ function UploadForm({ onDone }: { onDone: () => Promise<void> | void }) {
     setProgress({ phase: "uploading", current: 0, total: totalBytes, label: "Iniciando…" });
     const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     try {
-      // Upload SERVIDOR chunks
       await uploadFileInChunks(sessionId, servidorFile, 0);
-      // Upload CLIENTE chunks
       await uploadFileInChunks(sessionId, clienteFile, 1);
-      // Finalize
       setProgress((p) => ({ ...p, phase: "finalizing", label: "Subiendo a GitHub Releases…" }));
       const res = await fetch("/api/admin/upload-finalize", {
         method: "POST",
@@ -1286,7 +1688,6 @@ function UploadForm({ onDone }: { onDone: () => Promise<void> | void }) {
       }
       setProgress({ phase: "done", current: totalBytes, total: totalBytes, label: "¡Listo!" });
       toast.success(`Versión ${version} publicada correctamente`);
-      // reset
       setVersion("");
       setChangelog("");
       setServidorFile(null);
@@ -1619,8 +2020,8 @@ function VersionsAdminTable({
                       </AlertDialogTitle>
                       <AlertDialogDescription>
                         Esta acción quita la versión de la base de datos.
-                        ¿Quieres eliminar también el release en GitHub
-                        (tag <code className="px-1 rounded bg-zinc-100">v{v.version}</code>)?
+                        ¿Quieres eliminar también el release en GitHub (tag{" "}
+                        <code className="px-1 rounded bg-zinc-100">v{v.version}</code>)?
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
@@ -1951,14 +2352,25 @@ function ApkVersionsAdminTable({
 
 function Footer() {
   return (
-    <footer className="mt-auto bg-[#0B1526] text-white">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex items-center justify-between flex-wrap gap-6">
+    <footer className="mt-auto bg-[#0A1220] text-white relative overflow-hidden">
+      {/* Franjas de cebra decorativas */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-0 top-0 h-full w-20 sm:w-36 opacity-[0.06]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(115deg, #fff 0 14px, transparent 14px 34px)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-24 -left-16 h-64 w-64 rounded-full bg-sky-500/10 blur-3xl"
+      />
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-10 flex items-center justify-between flex-wrap gap-6">
         <div className="flex items-center gap-3">
-          <Logo size={34} />
+          <Logo size={36} />
           <div>
-            <div className="font-semibold text-sm">
-              PuenteZebra
-            </div>
+            <div className="font-semibold text-sm">PuenteZebra</div>
             <div className="text-xs text-sky-100/50">
               Sistema de impresión ZD220 en red
             </div>
@@ -1983,7 +2395,7 @@ function Footer() {
           </span>
         </div>
       </div>
-      <div className="border-t border-white/5">
+      <div className="relative border-t border-white/5">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 text-[11px] text-sky-100/40">
           © {new Date().getFullYear()} PuenteZebra · Hecho para imprimir etiquetas sin complicaciones.
         </div>
