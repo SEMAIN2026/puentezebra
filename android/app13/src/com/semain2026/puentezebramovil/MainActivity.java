@@ -13,6 +13,12 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
+import android.content.res.ColorStateList;
+import android.view.Gravity;
 import android.graphics.pdf.PdfDocument;
 import android.graphics.pdf.PdfRenderer;
 import android.net.Uri;
@@ -81,44 +87,122 @@ public class MainActivity extends Activity {
         revisarActualizaciones(false);
     }
 
+    // ---------- Paleta de la interfaz ----------
+    private static final int C_FONDO = 0xFFEDF1F7;
+    private static final int C_TARJETA = 0xFFFFFFFF;
+    private static final int C_BORDE = 0xFFDCE4EC;
+    private static final int C_OSCURO = 0xFF0E1A2B;
+    private static final int C_PRIMARIO = 0xFF0B66C9;
+    private static final int C_ACENTO = 0xFF2E9BFF;
+    private static final int C_TEXTO = 0xFF16233A;
+    private static final int C_SUBTITULO = 0xFF5A6A80;
+    private static final int C_CAMPO = 0xFFF7FAFD;
+    private static final int C_BORDE_CAMPO = 0xFFD5DEE9;
+    private static final int C_TINTADO = 0xFFE4F0FB;
+
     private void buildUI() {
         SharedPreferences prefs = prefs();
+
+        // Barra de estado del teléfono a juego con el encabezado.
+        try {
+            getWindow().setStatusBarColor(C_OSCURO);
+        } catch (Throwable ignored) {
+        }
+
+        LinearLayout raiz = vbox();
+        raiz.setBackgroundColor(C_FONDO);
+
+        // ===== Encabezado de marca =====
+        LinearLayout cabecera = vbox();
+        cabecera.setBackgroundColor(C_OSCURO);
+        int ph = dp(20);
+        cabecera.setPadding(ph, dp(16), ph, dp(14));
+
+        LinearLayout filaMarca = row();
+        LinearLayout logoCaja = vbox();
+        GradientDrawable gdLogo = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{0xFF2E9BFF, 0xFF0B66C9});
+        gdLogo.setCornerRadius(dp(12));
+        logoCaja.setBackground(gdLogo);
+        logoCaja.setPadding(dp(10), dp(10), dp(10), dp(10));
+        TextView logoTexto = new TextView(this);
+        logoTexto.setText("PZ");
+        logoTexto.setTextColor(0xFFFFFFFF);
+        logoTexto.setTextSize(16.0f);
+        logoTexto.setTypeface(Typeface.DEFAULT_BOLD);
+        logoCaja.addView(logoTexto);
+        filaMarca.addView(logoCaja);
+
+        LinearLayout titulos = vbox();
+        TextView nombre = new TextView(this);
+        nombre.setText("PuenteZebra Móvil");
+        nombre.setTextColor(0xFFFFFFFF);
+        nombre.setTextSize(19.0f);
+        nombre.setTypeface(Typeface.DEFAULT_BOLD);
+        titulos.addView(nombre);
+        TextView lema = new TextView(this);
+        lema.setText("Imprime en las dos impresoras del SERVIDOR: etiquetas "
+                + "Zebra y hoja carta, con el Wi-Fi de la oficina.");
+        lema.setTextColor(0xFFAFC1D4);
+        lema.setTextSize(12.0f);
+        lema.setPadding(0, dp(3), 0, 0);
+        titulos.addView(lema);
+        filaMarca.addView(titulos, new LinearLayout.LayoutParams(0, -2, 1.0f));
+        filaMarca.setGravity(Gravity.CENTER_VERTICAL);
+        cabecera.addView(filaMarca);
+
+        TextView version = new TextView(this);
+        version.setText("v" + VersionInfo.VERSION_NAME);
+        version.setTextColor(0xFF0E1A2B);
+        version.setTextSize(11.0f);
+        version.setTypeface(Typeface.DEFAULT_BOLD);
+        LinearLayout chip = vbox();
+        chip.setBackground(redondeado(0xFF2E9BFF, dp(20), 0, 0, null));
+        chip.setPadding(dp(10), dp(4), dp(10), dp(4));
+        chip.addView(version);
+        LinearLayout filaChip = row();
+        filaChip.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        filaChip.addView(chip);
+        cabecera.addView(filaChip, new LinearLayout.LayoutParams(-1, -2));
+
+        // Línea de acento bajo el encabezado.
+        View linea = new View(this);
+        linea.setBackgroundColor(C_ACENTO);
+        cabecera.addView(linea, new LinearLayout.LayoutParams(-1, dp(3)));
+        raiz.addView(cabecera);
+
+        // ===== Contenido con desplazamiento =====
         ScrollView scroll = new ScrollView(this);
-        LinearLayout vbox = vbox();
-        int dp = dp(16);
-        vbox.setPadding(dp, dp, dp, dp);
-        scroll.addView(vbox);
-        setContentView(scroll);
+        LinearLayout contenido = vbox();
+        int pc = dp(14);
+        contenido.setPadding(pc, pc, pc, dp(18));
+        scroll.addView(contenido);
+        LinearLayout.LayoutParams lpScroll = new LinearLayout.LayoutParams(-1, 0, 1.0f);
+        raiz.addView(scroll, lpScroll);
 
-        TextView titulo = new TextView(this);
-        titulo.setText("PuenteZebra Móvil " + VersionInfo.VERSION_NAME);
-        titulo.setTextSize(20.0f);
-        titulo.setTypeface(Typeface.DEFAULT_BOLD);
-        vbox.addView(titulo);
-
-        TextView intro = new TextView(this);
-        intro.setText("Imprime en las dos impresoras del SERVIDOR (etiquetas Zebra y hoja carta) "
-                + "desde tu teléfono, con el mismo Wi-Fi de la oficina.");
-        intro.setTextSize(13.0f);
-        intro.setPadding(0, dp(2), 0, dp(12));
-        vbox.addView(intro);
-
-        vbox.addView(label("IP del SERVIDOR (la que muestra su ventana, ej. 192.168.1.50):"));
+        // --- Tarjeta 1: conexión ---
+        LinearLayout tCon = tarjeta();
+        tCon.addView(tituloTarjeta("Conexión con el SERVIDOR"));
+        tCon.addView(nota("Escribe la IP que muestra la ventana del SERVIDOR en "
+                + "la PC de las impresoras."));
+        tCon.addView(campoLabel("IP del SERVIDOR (ej. 192.168.1.50)"));
         etIP = editText(prefs.getString("ip", ""), false);
-        vbox.addView(etIP);
+        etIP.setHint("192.168.1.50");
+        tCon.addView(etIP);
 
-        LinearLayout row = row();
-        LinearLayout colA = vbox();
-        colA.addView(label("Puerto etiquetas"));
+        LinearLayout rowPuertos = row();
+        LinearLayout colE = vbox();
+        colE.addView(campoLabel("Puerto etiquetas"));
         etPortTags = editText(String.valueOf(prefs.getInt("portTags", 9100)), true);
-        colA.addView(etPortTags);
-        LinearLayout colB = vbox();
-        colB.addView(label("Puerto documentos"));
+        colE.addView(etPortTags);
+        LinearLayout colD = vbox();
+        colD.addView(campoLabel("Puerto documentos"));
         etPortDocs = editText(String.valueOf(prefs.getInt("portDocs", 9101)), true);
-        colB.addView(etPortDocs);
-        row.addView(colA, lpWeights());
-        row.addView(colB, lpWeights());
-        vbox.addView(row);
+        colD.addView(etPortDocs);
+        rowPuertos.addView(colE, lpWeights());
+        rowPuertos.addView(colD, lpWeights());
+        espacio(tCon, 10);
+        tCon.addView(rowPuertos);
 
         LinearLayout filaGuardar = row();
         filaGuardar.addView(btn("Guardar", new View.OnClickListener() {
@@ -127,43 +211,55 @@ public class MainActivity extends Activity {
                 guardar();
             }
         }), lpWeights());
-        filaGuardar.addView(btn("Probar conexión", new View.OnClickListener() {
+        hueco(filaGuardar, 10);
+        filaGuardar.addView(btnContorno("Probar conexión", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 probarConexion();
             }
         }), lpWeights());
-        vbox.addView(filaGuardar);
+        espacio(tCon, 14);
+        tCon.addView(filaGuardar);
+        contenido.addView(tCon, lpTarjeta());
 
-        vbox.addView(label("IMPRIMIR DESDE OTRAS APPS (impresora virtual)"));
-        TextView ayuda = new TextView(this);
-        ayuda.setText("PuenteZebra aparece como impresora del teléfono:\n"
-                + "1) Pulsa \"Activar\" y enciende \"PuenteZebra Móvil\" en Ajustes → Impresión.\n"
-                + "2) En Fotos, el escáner, un PDF, WhatsApp… → menú → Imprimir.\n"
-                + "3) Elige \"PuenteZebra ETIQUETAS\" o \"PuenteZebra DOCUMENTOS\": verás la vista "
-                + "previa, el número de páginas y las copias antes de imprimir.\n"
-                + "Si un trabajo falla, el MOTIVO exacto aparece en la notificación y en "
-                + "Ajustes → Impresión.");
-        ayuda.setTextSize(12.0f);
-        ayuda.setPadding(0, dp(2), 0, dp(4));
-        vbox.addView(ayuda);
-
+        // --- Tarjeta 2: imprimir desde otras apps ---
+        LinearLayout tVirt = tarjeta();
+        tVirt.addView(tituloTarjeta("Imprimir desde otras apps"));
+        tVirt.addView(nota("Activa una vez la impresora virtual y luego "
+                + "imprime desde Fotos, el escáner, PDF o WhatsApp como con "
+                + "cualquier impresora: verás la vista previa y las copias "
+                + "antes de imprimir."));
+        tVirt.addView(paso(1, "Pulsa \"Activar servicio\" y enciende "
+                + "\"PuenteZebra Móvil\" en Ajustes → Impresión."));
+        tVirt.addView(paso(2, "En la otra app: menú → Imprimir."));
+        tVirt.addView(paso(3, "Elige \"PuenteZebra ETIQUETAS\" (Zebra) o "
+                + "\"PuenteZebra DOCUMENTOS\" (hoja carta)."));
+        espacio(tVirt, 12);
         LinearLayout filaVirt = row();
-        filaVirt.addView(btn("Activar servicio de impresión", new View.OnClickListener() {
+        filaVirt.addView(btnOscuro("Activar servicio", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 abrirAjustesDeImpresion();
             }
         }), lpWeights());
-        filaVirt.addView(btn("Imprimir foto o PDF (vista previa)", new View.OnClickListener() {
+        hueco(filaVirt, 10);
+        filaVirt.addView(btnContorno("Elegir foto o PDF", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 elegirParaVistaPrevia();
             }
         }), lpWeights());
-        vbox.addView(filaVirt);
+        tVirt.addView(filaVirt);
+        TextView pista = nota("Si un trabajo falla, el motivo exacto aparece en "
+                + "la notificación y en Ajustes → Impresión.");
+        pista.setPadding(0, dp(8), 0, 0);
+        tVirt.addView(pista);
+        contenido.addView(tVirt, lpTarjeta());
 
-        vbox.addView(label("¿A dónde va a imprimir?"));
+        // --- Tarjeta 3: imprimir desde esta app ---
+        LinearLayout tApp = tarjeta();
+        tApp.addView(tituloTarjeta("Imprimir desde esta app"));
+        tApp.addView(campoLabel("¿A dónde va a imprimir?"));
         spDest = new Spinner(this);
         ArrayAdapter<String> adaptador = new ArrayAdapter<String>(this,
                 android.R.layout.simple_spinner_item,
@@ -172,39 +268,44 @@ public class MainActivity extends Activity {
         adaptador.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spDest.setAdapter((SpinnerAdapter) adaptador);
         spDest.setSelection(prefs.getInt("dest", 0));
-        vbox.addView(spDest);
+        LinearLayout cajaSpinner = vbox();
+        cajaSpinner.setBackground(redondeado(C_CAMPO, dp(10), C_BORDE_CAMPO, 1, null));
+        cajaSpinner.setPadding(dp(10), dp(6), dp(10), dp(6));
+        cajaSpinner.addView(spDest);
+        tApp.addView(cajaSpinner);
 
-        vbox.addView(label("Tamaño de etiqueta (mm) — para la impresora virtual:"));
+        tApp.addView(campoLabel("Tamaño de etiqueta (mm) — para la impresora virtual"));
         LinearLayout filaTam = row();
         LinearLayout colW = vbox();
-        colW.addView(label("Ancho"));
+        colW.addView(campoLabel("Ancho"));
         etLblW = editText(String.valueOf(prefs.getInt("labelWmm", 102)), true);
         colW.addView(etLblW);
         LinearLayout colH = vbox();
-        colH.addView(label("Alto"));
+        colH.addView(campoLabel("Alto"));
         etLblH = editText(String.valueOf(prefs.getInt("labelHmm", 152)), true);
         colH.addView(etLblH);
         filaTam.addView(colW, lpWeights());
         filaTam.addView(colH, lpWeights());
-        vbox.addView(filaTam);
+        espacio(tApp, 10);
+        tApp.addView(filaTam);
+        tApp.addView(nota("Normal: 102×152 (etiqueta 4×6\" o 100×150). "
+                + "Otras comunes: 100×100, 51×89 (2×3,5\")."));
 
-        TextView notaTam = new TextView(this);
-        notaTam.setText("Normal: 102×152 (etiqueta 4×6\" o 100×150). Otras comunes: 100×100, "
-                + "51×89 (2×3,5\").");
-        notaTam.setTextSize(12.0f);
-        notaTam.setPadding(0, dp(4), 0, dp(2));
-        vbox.addView(notaTam);
-
-        vbox.addView(label("Texto a imprimir:"));
+        espacio(tApp, 6);
+        tApp.addView(campoLabel("Texto a imprimir"));
         etText = new EditText(this);
         etText.setHint("Escribe aquí lo que quieres imprimir…");
         etText.setSingleLine(false);
         etText.setRawInputType(131073);
-        etText.setMinLines(6);
+        etText.setMinLines(5);
         etText.setGravity(48);
         etText.setTextSize(14.0f);
-        vbox.addView(etText, new LinearLayout.LayoutParams(-1, -2));
+        etText.setTextColor(C_TEXTO);
+        etText.setBackground(redondeado(C_CAMPO, dp(10), C_BORDE_CAMPO, 1, null));
+        etText.setPadding(dp(12), dp(10), dp(12), dp(10));
+        tApp.addView(etText, new LinearLayout.LayoutParams(-1, -2));
 
+        espacio(tApp, 14);
         LinearLayout filaTexto = row();
         filaTexto.addView(btn("Imprimir texto", new View.OnClickListener() {
             @Override
@@ -212,70 +313,100 @@ public class MainActivity extends Activity {
                 imprimirTexto();
             }
         }), lpWeights());
-        filaTexto.addView(btn("Enviar archivo…", new View.OnClickListener() {
+        hueco(filaTexto, 10);
+        filaTexto.addView(btnContorno("Enviar archivo…", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 enviarArchivo();
             }
         }), lpWeights());
-        vbox.addView(filaTexto);
+        tApp.addView(filaTexto);
 
+        espacio(tApp, 10);
+        TextView subPruebas = nota("Comprobación rápida de la conexión:");
+        subPruebas.setTextColor(C_SUBTITULO);
+        subPruebas.setTypeface(Typeface.DEFAULT_BOLD);
+        tApp.addView(subPruebas);
         LinearLayout filaPrueba = row();
-        filaPrueba.addView(btn("Etiqueta de prueba", new View.OnClickListener() {
+        filaPrueba.addView(btnTintado("Etiqueta de prueba", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 etiquetaPrueba();
             }
         }), lpWeights());
-        filaPrueba.addView(btn("Página de prueba", new View.OnClickListener() {
+        hueco(filaPrueba, 10);
+        filaPrueba.addView(btnTintado("Página de prueba", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 paginaPrueba();
             }
         }), lpWeights());
-        vbox.addView(filaPrueba);
+        espacio(tApp, 8);
+        tApp.addView(filaPrueba);
+        contenido.addView(tApp, lpTarjeta());
 
-        TextView nota = new TextView(this);
-        nota.setText("El SERVIDOR debe estar abierto en la PC de las impresoras. Con la IMPRESORA "
-                + "VIRTUAL las fotos y PDF salen como imagen real en ambas impresoras. El cuadro de "
-                + "texto de abajo imprime en texto simple, como en la versión de PC.");
-        nota.setTextSize(12.0f);
-        nota.setPadding(0, dp(10), 0, dp(4));
-        vbox.addView(nota);
+        // --- Tarjeta 4: app y actualizaciones ---
+        LinearLayout tMas = tarjeta();
+        tMas.addView(tituloTarjeta("App y actualizaciones"));
+        TextView versionLinea = new TextView(this);
+        versionLinea.setText("Versión " + VersionInfo.VERSION_NAME
+                + "  ·  código " + VersionInfo.VERSION_CODE);
+        versionLinea.setTextColor(C_TEXTO);
+        versionLinea.setTextSize(12.5f);
+        versionLinea.setTypeface(Typeface.DEFAULT_BOLD);
+        tMas.addView(versionLinea);
+        tMas.addView(nota("La app revisa sola si hay versión nueva al abrirla. "
+                + "Instalar un APK más nuevo ACTUALIZA encima del actual: no se "
+                + "borra nada y la configuración (IP y puertos) se conserva."));
 
-        tvStatus = new TextView(this);
-        tvStatus.setText("Listo.");
-        tvStatus.setTextSize(13.0f);
-        tvStatus.setTypeface(Typeface.MONOSPACE);
-        tvStatus.setPadding(0, dp(6), 0, 0);
-        vbox.addView(tvStatus);
-
-        vbox.addView(label("App — versión " + VersionInfo.VERSION_NAME
-                + " (código de versión " + VersionInfo.VERSION_CODE + ")"));
         LinearLayout filaApp = row();
-        filaApp.addView(btn("Buscar actualizaciones", new View.OnClickListener() {
+        filaApp.addView(btnContorno("Buscar actualizaciones", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 status("Revisando en " + SITE_URL.replace("https://", "") + " …");
                 revisarActualizaciones(true);
             }
         }), lpWeights());
-        filaApp.addView(btn("Página de descargas", new View.OnClickListener() {
+        hueco(filaApp, 10);
+        filaApp.addView(btnOscuro("Página de descargas", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 abrirPaginaDescargas();
             }
         }), lpWeights());
-        vbox.addView(filaApp);
+        espacio(tMas, 12);
+        tMas.addView(filaApp);
+        contenido.addView(tMas, lpTarjeta());
 
-        TextView notaApp = new TextView(this);
-        notaApp.setText("La app revisa sola si hay versión nueva al abrirla. Si descargas e "
-                + "instalas un APK más nuevo (desde la propia app o desde la página), Android lo "
-                + "ACTUALIZA ENCIMA del que ya tienes: no se borra nada y la configuración (IP y "
-                + "puertos) se conserva.");
-        notaApp.setTextSize(12.0f);
-        notaApp.setPadding(0, dp(6), 0, dp(4));
-        vbox.addView(notaApp);
+        // ===== Pie: estado en forma de consola =====
+        LinearLayout pie = vbox();
+        pie.setBackgroundColor(C_OSCURO);
+        pie.setPadding(ph, dp(10), ph, dp(12));
+        LinearLayout filaEstado = row();
+        View punto = new View(this);
+        LinearLayout.LayoutParams lpPunto = new LinearLayout.LayoutParams(dp(8), dp(8));
+        punto.setBackground(redondeado(0xFF39D98A, dp(4), 0, 0, null));
+        filaEstado.addView(punto, lpPunto);
+        TextView etq = new TextView(this);
+        etq.setText("Estado");
+        etq.setTextColor(0xFF8DA2B8);
+        etq.setTextSize(11.0f);
+        etq.setTypeface(Typeface.DEFAULT_BOLD);
+        LinearLayout.LayoutParams lpEtq = new LinearLayout.LayoutParams(-2, -2);
+        lpEtq.leftMargin = dp(8);
+        filaEstado.addView(etq, lpEtq);
+        filaEstado.setGravity(Gravity.CENTER_VERTICAL);
+        pie.addView(filaEstado);
+        tvStatus = new TextView(this);
+        tvStatus.setText("Listo. Configura la IP del SERVIDOR para empezar.");
+        tvStatus.setTextSize(12.5f);
+        tvStatus.setTypeface(Typeface.MONOSPACE);
+        tvStatus.setTextColor(0xFFE8EEF5);
+        tvStatus.setPadding(0, dp(4), 0, 0);
+        pie.addView(tvStatus);
+        raiz.addView(pie);
+
+        setContentView(raiz);
     }
 
     private void abrirPaginaDescargas() {
@@ -714,19 +845,36 @@ public class MainActivity extends Activity {
     }
 
     private int contarPaginasPdf(Uri uri) throws Exception {
-        ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(uri, "r");
-        if (pfd == null) {
-            throw new Exception("no se pudo abrir el PDF");
-        }
+        // v1.3.2: no se abre el PdfRenderer sobre el descriptor del
+        // proveedor (puede ser una tubería no seekable, igual que el spooler).
+        // Se copia a un archivo temporal y se cuenta sobre él.
+        final byte[] pdf = leerTodo(uri);
+        File temporal = File.createTempFile("pz_", ".pdf", getCacheDir());
+        ParcelFileDescriptor pfd = null;
+        PdfRenderer renderer = null;
         try {
-            PdfRenderer renderer = new PdfRenderer(pfd);
-            try {
-                return renderer.getPageCount();
-            } finally {
-                renderer.close();
-            }
+            FileOutputStream out = new FileOutputStream(temporal);
+            out.write(pdf);
+            out.flush();
+            out.close();
+            pfd = ParcelFileDescriptor.open(temporal,
+                    ParcelFileDescriptor.MODE_READ_ONLY);
+            renderer = new PdfRenderer(pfd);
+            return renderer.getPageCount();
         } finally {
-            pfd.close();
+            try {
+                if (renderer != null) {
+                    renderer.close();
+                }
+            } catch (Throwable ignored) {
+            }
+            try {
+                if (pfd != null) {
+                    pfd.close();
+                }
+            } catch (Throwable ignored) {
+            }
+            temporal.delete();
         }
     }
 
@@ -1023,11 +1171,162 @@ public class MainActivity extends Activity {
         return getSharedPreferences("cfg", 0);
     }
 
-    private TextView label(String texto) {
+    // ---------- Constructores de la interfaz ----------
+
+    /** Tarjeta blanca redondeada con borde suave. */
+    private LinearLayout tarjeta() {
+        LinearLayout c = vbox();
+        c.setBackground(redondeado(C_TARJETA, dp(16), C_BORDE, dp(1), null));
+        c.setPadding(dp(16), dp(14), dp(16), dp(14));
+        return c;
+    }
+
+    /** Margen vertical dentro de una tarjeta (en dp). */
+    private void espacio(LinearLayout padre, int altoDp) {
+        View v = new View(this);
+        padre.addView(v, new LinearLayout.LayoutParams(-1, dp(altoDp)));
+    }
+
+    /** Espacio horizontal entre dos botones de la misma fila. */
+    private void hueco(LinearLayout fila, int anchoDp) {
+        View v = new View(this);
+        fila.addView(v, new LinearLayout.LayoutParams(dp(anchoDp), 1));
+    }
+
+    private LinearLayout.LayoutParams lpTarjeta() {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.topMargin = dp(12);
+        return lp;
+    }
+
+    /** Título de tarjeta con marcador de acento. */
+    private LinearLayout tituloTarjeta(String texto) {
+        LinearLayout fila = row();
+        fila.setGravity(Gravity.CENTER_VERTICAL);
+        View marcador = new View(this);
+        LinearLayout.LayoutParams lpM = new LinearLayout.LayoutParams(dp(4), dp(16));
+        marcador.setBackground(redondeado(C_ACENTO, dp(2), 0, 0, null));
+        fila.addView(marcador, lpM);
         TextView tv = new TextView(this);
         tv.setText(texto);
-        tv.setPadding(0, dp(10), 0, dp(2));
+        tv.setTextColor(C_TEXTO);
+        tv.setTextSize(15.0f);
+        tv.setTypeface(Typeface.DEFAULT_BOLD);
+        LinearLayout.LayoutParams lpT = new LinearLayout.LayoutParams(-2, -2);
+        lpT.leftMargin = dp(8);
+        fila.addView(tv, lpT);
+        return fila;
+    }
+
+    private TextView nota(String texto) {
+        TextView tv = new TextView(this);
+        tv.setText(texto);
+        tv.setTextColor(C_SUBTITULO);
+        tv.setTextSize(12.0f);
+        tv.setLineSpacing(dp(2), 1.0f);
+        tv.setPadding(0, dp(2), 0, dp(6));
         return tv;
+    }
+
+    private TextView campoLabel(String texto) {
+        TextView tv = new TextView(this);
+        tv.setText(texto);
+        tv.setTextColor(0xFF41526B);
+        tv.setTextSize(11.5f);
+        tv.setTypeface(Typeface.DEFAULT_BOLD);
+        tv.setPadding(0, dp(10), 0, dp(4));
+        return tv;
+    }
+
+    /** Un paso numerado con círculo azul. */
+    private LinearLayout paso(int n, String texto) {
+        LinearLayout fila = row();
+        fila.setGravity(Gravity.CENTER_VERTICAL);
+        TextView num = new TextView(this);
+        num.setText(String.valueOf(n));
+        num.setTextColor(0xFFFFFFFF);
+        num.setTextSize(12.0f);
+        num.setTypeface(Typeface.DEFAULT_BOLD);
+        num.setGravity(Gravity.CENTER);
+        GradientDrawable circulo = new GradientDrawable();
+        circulo.setShape(GradientDrawable.OVAL);
+        circulo.setColor(C_PRIMARIO);
+        num.setBackground(circulo);
+        LinearLayout.LayoutParams lpN = new LinearLayout.LayoutParams(dp(22), dp(22));
+        fila.addView(num, lpN);
+        TextView tv = new TextView(this);
+        tv.setText(texto);
+        tv.setTextColor(C_SUBTITULO);
+        tv.setTextSize(12.5f);
+        LinearLayout.LayoutParams lpT = new LinearLayout.LayoutParams(0, -2, 1.0f);
+        lpT.leftMargin = dp(10);
+        fila.addView(tv, lpT);
+        return fila;
+    }
+
+    /** Fondo redondeado; con colores de degradado si se dan dos colores. */
+    private GradientDrawable redondeado(int color, int radioPx, int colorBorde,
+                                        int grosorBordePx, int[] degradado) {
+        GradientDrawable g;
+        if (degradado != null && degradado.length >= 2) {
+            g = new GradientDrawable(GradientDrawable.Orientation.TL_BR, degradado);
+        } else {
+            g = new GradientDrawable();
+            if (color != 0) {
+                g.setColor(color);
+            }
+        }
+        if (radioPx > 0) {
+            g.setCornerRadius(radioPx);
+        }
+        if (colorBorde != 0) {
+            g.setStroke(Math.max(1, grosorBordePx), colorBorde);
+        }
+        return g;
+    }
+
+    private Drawable conRipple(Drawable base, int color) {
+        return new RippleDrawable(ColorStateList.valueOf(color), base,
+                new ColorDrawable(0xFFFFFFFF));
+    }
+
+    private Button btn(String texto, View.OnClickListener listener) {
+        return botonBase(texto, listener, redondeado(C_PRIMARIO, dp(12), 0, 0, null),
+                0xFFFFFFFF, 0x33FFFFFF);
+    }
+
+    private Button btnContorno(String texto, View.OnClickListener listener) {
+        return botonBase(texto, listener, redondeado(C_TARJETA, dp(12), C_BORDE, dp(1), null),
+                C_TEXTO, 0x1F0B66C9);
+    }
+
+    private Button btnOscuro(String texto, View.OnClickListener listener) {
+        return botonBase(texto, listener, redondeado(C_OSCURO, dp(12), 0, 0, null),
+                0xFFFFFFFF, 0x33FFFFFF);
+    }
+
+    private Button btnTintado(String texto, View.OnClickListener listener) {
+        return botonBase(texto, listener, redondeado(C_TINTADO, dp(12), 0x330B66C9, dp(1), null),
+                C_PRIMARIO, 0x220B66C9);
+    }
+
+    private Button botonBase(String texto, View.OnClickListener listener, GradientDrawable base,
+                             int colorTexto, int colorRipple) {
+        Button b = new Button(this);
+        b.setText(texto);
+        b.setAllCaps(false);
+        b.setTextSize(13.5f);
+        b.setTypeface(Typeface.DEFAULT_BOLD);
+        b.setTextColor(colorTexto);
+        b.setPadding(dp(6), 0, dp(6), 0);
+        b.setMinHeight(dp(44));
+        b.setOnClickListener(listener);
+        b.setBackground(conRipple(base, colorRipple));
+        return b;
+    }
+
+    private TextView label(String texto) {
+        return campoLabel(texto);
     }
 
     private EditText editText(String texto, boolean numerico) {
@@ -1036,16 +1335,12 @@ public class MainActivity extends Activity {
         if (numerico) {
             et.setRawInputType(2);
         }
-        et.setTextSize(14.0f);
+        et.setTextSize(15.0f);
+        et.setTextColor(C_TEXTO);
+        et.setHintTextColor(0xFF9AACC0);
+        et.setBackground(redondeado(C_CAMPO, dp(10), C_BORDE_CAMPO, dp(1), null));
+        et.setPadding(dp(12), dp(10), dp(12), dp(10));
         return et;
-    }
-
-    private Button btn(String texto, View.OnClickListener listener) {
-        Button b = new Button(this);
-        b.setText(texto);
-        b.setTextSize(13.0f);
-        b.setOnClickListener(listener);
-        return b;
     }
 
     private LinearLayout vbox() {

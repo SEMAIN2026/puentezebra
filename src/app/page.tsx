@@ -54,6 +54,16 @@ import {
   Github,
   ExternalLink,
   Info,
+  Wifi,
+  Zap,
+  ArrowRight,
+  CheckCircle2,
+  FileText,
+  ScanLine,
+  RefreshCw,
+  MousePointerClick,
+  Network,
+  BadgeCheck,
 } from "lucide-react";
 import QRCode from "qrcode";
 
@@ -139,7 +149,7 @@ export default function Home() {
     apkVersions.find((v) => v.is_latest === 1) ?? apkVersions[0] ?? null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-zinc-50 via-white to-zinc-100 text-zinc-900">
+    <div className="min-h-screen flex flex-col bg-[#F5F7FB] text-zinc-900">
       <Header
         authed={authed}
         onLogout={async () => {
@@ -154,7 +164,7 @@ export default function Home() {
         }}
       />
 
-      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
         {view === "public" && (
           <PublicView
             latest={latest}
@@ -191,6 +201,26 @@ export default function Home() {
 
 /* ---------------- Header ---------------- */
 
+function Logo({ size = 36 }: { size?: number }) {
+  return (
+    <div
+      className="relative rounded-xl overflow-hidden grid place-items-center font-black text-white select-none"
+      style={{ width: size, height: size, fontSize: size * 0.36 }}
+      aria-hidden
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-sky-400 to-sky-700" />
+      <div
+        className="absolute inset-0 opacity-60"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(115deg, rgba(0,0,0,0.85) 0 7px, transparent 7px 18px)",
+        }}
+      />
+      <span className="relative drop-shadow-sm">PZ</span>
+    </div>
+  );
+}
+
 function Header({
   authed,
   onLogout,
@@ -201,20 +231,25 @@ function Header({
   onAdminClick: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-30 backdrop-blur bg-white/80 border-b border-zinc-200">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-        <a href="#" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-md bg-zinc-900 grid place-items-center text-white font-bold text-sm">
-            PZ
-          </div>
-          <span className="font-semibold tracking-tight">PuenteZebra</span>
+    <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/75 border-b border-zinc-200/70">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+        <a href="#" className="flex items-center gap-3 group">
+          <Logo size={38} />
+          <span className="leading-tight">
+            <span className="block font-bold tracking-tight text-[15px]">
+              PuenteZebra
+            </span>
+            <span className="hidden sm:block text-[11px] text-zinc-500">
+              Impresión Zebra ZD220 en red
+            </span>
+          </span>
         </a>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <a
             href="https://github.com/SEMAIN2026/puentezebra"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm text-zinc-600 hover:text-zinc-900 transition-colors px-2 py-1.5"
+            className="inline-flex items-center gap-1.5 text-sm text-zinc-600 hover:text-zinc-900 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-zinc-100"
           >
             <Github className="w-4 h-4" />
             <span className="hidden sm:inline">GitHub</span>
@@ -256,135 +291,265 @@ function PublicView({
   apk: ApkVersionRow | null;
 }) {
   return (
-    <div className="space-y-12">
-      {/* Hero */}
-      <section className="text-center space-y-6">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 text-white text-xs font-medium">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          {loading ? "Cargando…" : latest ? `Última versión: v${latest.version}` : "Sin versiones todavía"}
-        </div>
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight">
-          Descargas de{" "}
-          <span className="relative inline-block">
-            <span className="relative z-10">PuenteZebra</span>
-            <span
-              aria-hidden
-              className="absolute inset-x-0 bottom-1 h-3 bg-zinc-300/70 -z-0"
-              style={{
-                backgroundImage:
-                  "repeating-linear-gradient(90deg, #000 0 8px, transparent 8px 16px)",
-                opacity: 0.15,
-              }}
-            />
-          </span>
-        </h1>
-        <p className="max-w-2xl mx-auto text-zinc-600 text-base sm:text-lg">
-          Sistema de impresión Zebra ZD220 en red. El servidor recibe trabajos
-          por la red local desde una impresora virtual instalada en los PCs de
-          tus compañeros. Descarga aquí los dos ejecutables y sigue las
-          instrucciones del archivo <code className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-900 text-sm">LEEME.txt</code>.
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-zinc-500">
-          <span className="inline-flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4" /> Windows 10/11 64-bit
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Printer className="w-4 h-4" /> Zebra ZD220
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Monitor className="w-4 h-4" /> Impresora virtual
-          </span>
-        </div>
+    <div className="space-y-16 sm:space-y-20">
+      <Hero latest={latest} loading={loading} />
+      <HowItWorks />
+      <section id="descargas" className="space-y-6">
+        <SectionHeading
+          icon={<Download className="w-5 h-5" />}
+          title="Descargas para Windows"
+          subtitle="Los dos ejecutables de la última versión, listos para copiar en cada PC."
+        />
+        {loading ? (
+          <Card className="border-zinc-200/80">
+            <CardContent className="py-16 flex items-center justify-center text-zinc-400">
+              <Loader2 className="w-6 h-6 animate-spin mr-2" />
+              Cargando…
+            </CardContent>
+          </Card>
+        ) : latest ? (
+          <LatestDownloadCard version={latest} />
+        ) : (
+          <Card className="border-dashed border-zinc-300 bg-white/60">
+            <CardContent className="py-16 text-center text-zinc-500">
+              <Package className="w-10 h-10 mx-auto mb-3 opacity-40" />
+              Aún no hay versiones publicadas.
+            </CardContent>
+          </Card>
+        )}
       </section>
-
-      {/* Latest download */}
-      {loading ? (
-        <Card className="border-zinc-200">
-          <CardContent className="py-16 flex items-center justify-center text-zinc-400">
-            <Loader2 className="w-6 h-6 animate-spin mr-2" />
-            Cargando…
-          </CardContent>
-        </Card>
-      ) : latest ? (
-        <LatestDownloadCard version={latest} />
-      ) : (
-        <Card className="border-dashed border-zinc-300 bg-zinc-50">
-          <CardContent className="py-16 text-center text-zinc-500">
-            <Package className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            Aún no hay versiones publicadas.
-          </CardContent>
-        </Card>
-      )}
-
-      {/* App Android */}
       <AndroidSection apk={apk} loading={loading} />
-
-      {/* Older versions */}
-      {older.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-semibold">Versiones anteriores</h2>
-            <Badge variant="secondary" className="font-mono">
-              {older.length}
-            </Badge>
-          </div>
-          <Accordion type="single" collapsible className="space-y-2">
-            {older.map((v) => (
-              <AccordionItem
-                key={v.id}
-                value={`v-${v.id}`}
-                className="border border-zinc-200 rounded-lg px-4 bg-white"
-              >
-                <AccordionTrigger className="hover:no-underline">
-                  <div className="flex items-center gap-3 w-full">
-                    <span className="font-mono font-semibold">v{v.version}</span>
-                    <span className="text-sm text-zinc-500">
-                      {formatDate(v.release_date)}
-                    </span>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <VersionDetail v={v} />
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </section>
-      )}
-
-      {/* Instructions */}
+      {older.length > 0 && <OlderVersions older={older} />}
       <InstructionsSection />
+      <FaqSection />
     </div>
   );
 }
 
+/* ---------------- Hero ---------------- */
+
+function Hero({
+  latest,
+  loading,
+}: {
+  latest: VersionRow | null;
+  loading: boolean;
+}) {
+  return (
+    <section className="relative overflow-hidden rounded-3xl bg-[#0B1526] text-white px-6 sm:px-12 py-14 sm:py-20 shadow-2xl shadow-[#0B1526]/30">
+      {/* Luces de fondo */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-32 -left-24 h-96 w-96 rounded-full bg-sky-500/30 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-40 -right-20 h-[28rem] w-[28rem] rounded-full bg-cyan-400/20 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-40"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.35) 1px, transparent 0)",
+          backgroundSize: "26px 26px",
+        }}
+      />
+      {/* Franjas de cebra decorativas */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-0 top-0 h-full w-24 sm:w-40 opacity-[0.10]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(115deg, #fff 0 14px, transparent 14px 34px)",
+        }}
+      />
+
+      <div className="relative max-w-2xl">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-medium text-sky-100 backdrop-blur">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+          </span>
+          {loading
+            ? "Cargando…"
+            : latest
+              ? `Última versión: v${latest.version} · ${formatDate(latest.release_date)}`
+              : "Sin versiones todavía"}
+        </div>
+
+        <h1 className="mt-6 text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.08]">
+          Imprime en tu{" "}
+          <span className="bg-gradient-to-r from-sky-300 via-cyan-200 to-sky-400 bg-clip-text text-transparent">
+            Zebra ZD220
+          </span>{" "}
+          desde cualquier equipo de la oficina
+        </h1>
+
+        <p className="mt-5 text-base sm:text-lg text-sky-100/70 max-w-xl leading-relaxed">
+          Dos ejecutables, cero complicaciones: el SERVIDOR se queda con la
+          impresora y los demás PCs imprimen con una impresora virtual. También
+          desde el teléfono con la app Android.
+        </p>
+
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <Button asChild size="lg" className="bg-white text-zinc-900 hover:bg-sky-100 h-12 px-6 text-base rounded-xl shadow-lg">
+            <a href="#descargas">
+              <Download className="w-5 h-5 mr-2" />
+              Descargar para Windows
+            </a>
+          </Button>
+          <Button
+            asChild
+            size="lg"
+            variant="outline"
+            className="border-white/25 bg-white/5 text-white hover:bg-white/10 hover:border-white/40 h-12 px-6 text-base rounded-xl"
+          >
+            <a href="#apk">
+              <Smartphone className="w-5 h-5 mr-2" />
+              App Android
+            </a>
+          </Button>
+        </div>
+
+        <div className="mt-9 flex flex-wrap gap-x-5 gap-y-2.5 text-sm text-sky-100/80">
+          {[
+            { icon: <Monitor className="w-4 h-4" />, label: "Windows 10/11 64-bit" },
+            { icon: <Wifi className="w-4 h-4" />, label: "Red local, sin internet" },
+            { icon: <Printer className="w-4 h-4" />, label: "Zebra ZD220 + hoja carta" },
+            { icon: <Zap className="w-4 h-4" />, label: "Instalación en minutos" },
+          ].map((f, i) => (
+            <span key={i} className="inline-flex items-center gap-1.5">
+              <span className="text-sky-300">{f.icon}</span>
+              {f.label}
+            </span>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- Cómo funciona ---------------- */
+
+function HowItWorks() {
+  const pasos = [
+    {
+      icon: <Server className="w-5 h-5" />,
+      titulo: "1 · En la PC de la impresora",
+      texto:
+        "Descarga y ejecuta el SERVIDOR. Elige tu Zebra ZD220 y abre el puerto del firewall: ya escucha trabajos de toda la red.",
+      color: "bg-sky-100 text-sky-700",
+    },
+    {
+      icon: <Monitor className="w-5 h-5" />,
+      titulo: "2 · En los demás PCs",
+      texto:
+        "Cada compañero ejecuta el CLIENTE y pulsa “Instalar impresora virtual”. Aparece “Zebra ZD220 (Red)” como una impresora más.",
+      color: "bg-cyan-100 text-cyan-700",
+    },
+    {
+      icon: <Printer className="w-5 h-5" />,
+      titulo: "3 · Imprime desde donde sea",
+      texto:
+        "Word, Excel, el navegador, el escáner… cualquier programa imprime y el trabajo sale en la Zebra del SERVIDOR.",
+      color: "bg-emerald-100 text-emerald-700",
+    },
+  ];
+  return (
+    <section className="space-y-6">
+      <SectionHeading
+        icon={<Network className="w-5 h-5" />}
+        title="¿Cómo funciona?"
+        subtitle="Tres pasos y la oficina imprime en la misma Zebra desde cualquier equipo."
+      />
+      <div className="grid sm:grid-cols-3 gap-4">
+        {pasos.map((p, i) => (
+          <Card
+            key={i}
+            className="group border-zinc-200/80 rounded-2xl hover:shadow-lg hover:shadow-zinc-200/60 hover:-translate-y-0.5 transition-all bg-white"
+          >
+            <CardContent className="pt-6">
+              <div
+                className={`w-11 h-11 rounded-xl grid place-items-center mb-4 ${p.color}`}
+              >
+                {p.icon}
+              </div>
+              <div className="font-bold text-[15px] mb-1.5">{p.titulo}</div>
+              <p className="text-sm text-zinc-600 leading-relaxed">{p.texto}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- Encabezado de sección ---------------- */
+
+function SectionHeading({
+  icon,
+  title,
+  subtitle,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <div className="flex items-start gap-3.5">
+      <div className="w-10 h-10 rounded-xl bg-zinc-900 grid place-items-center text-white shrink-0 mt-0.5">
+        {icon}
+      </div>
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
+        {subtitle && (
+          <p className="text-sm text-zinc-500 mt-1 max-w-xl leading-relaxed">
+            {subtitle}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Última versión ---------------- */
+
 function LatestDownloadCard({ version }: { version: VersionRow }) {
   return (
-    <Card className="overflow-hidden border-zinc-900/10 shadow-xl shadow-zinc-900/5">
-      <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 text-white px-6 sm:px-8 py-6 flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <div className="text-xs uppercase tracking-widest text-zinc-400 mb-1">
-            Última versión
+    <Card className="overflow-hidden border-zinc-200/80 rounded-3xl shadow-xl shadow-zinc-900/5 bg-white">
+      <div className="relative bg-gradient-to-br from-[#0B1526] via-[#12263F] to-[#0B1526] text-white px-6 sm:px-8 py-7 flex items-center justify-between flex-wrap gap-4">
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-[0.08]"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(115deg, #fff 0 12px, transparent 12px 28px)",
+          }}
+        />
+        <div className="relative">
+          <div className="text-[11px] uppercase tracking-[0.18em] text-sky-300/80 mb-1.5 font-semibold">
+            Última versión para Windows
           </div>
-          <div className="text-2xl sm:text-3xl font-bold font-mono">
+          <div className="text-3xl sm:text-4xl font-bold font-mono tracking-tight">
             v{version.version}
           </div>
         </div>
-        <div className="text-right text-sm text-zinc-300">
-          <div>Publicada: {formatDate(version.release_date)}</div>
-          <div className="flex items-center gap-1 justify-end mt-1">
-            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-            <span>Recomendada</span>
+        <div className="relative text-right text-sm text-sky-100/70">
+          <div className="flex items-center gap-1.5 justify-end">
+            <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+            Recomendada
           </div>
+          <div className="mt-1">Publicada {formatDate(version.release_date)}</div>
         </div>
       </div>
       <CardContent className="p-6 sm:p-8 space-y-6">
         {version.changelog && (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <h3 className="text-sm font-semibold text-zinc-700 flex items-center gap-1.5">
-              <Info className="w-4 h-4" /> Novedades
+              <Info className="w-4 h-4 text-sky-600" /> Novedades de esta versión
             </h3>
-            <pre className="whitespace-pre-wrap font-sans text-sm text-zinc-700 bg-zinc-50 rounded-md p-4 border border-zinc-100 max-h-72 overflow-y-auto">
+            <pre className="whitespace-pre-wrap font-sans text-sm text-zinc-700 bg-sky-50/70 border-l-4 border-sky-200 rounded-xl p-4 border border-zinc-100 max-h-72 overflow-y-auto leading-relaxed">
               {version.changelog}
             </pre>
           </div>
@@ -395,7 +560,7 @@ function LatestDownloadCard({ version }: { version: VersionRow }) {
             title="SERVIDOR"
             subtitle="Para tu PC con la Zebra ZD220"
             icon={<Server className="w-5 h-5" />}
-            filename={`PuenteZebra-SERVIDOR.exe`}
+            filename="PuenteZebra-SERVIDOR.exe"
             primary
           />
           <DownloadTile
@@ -403,9 +568,14 @@ function LatestDownloadCard({ version }: { version: VersionRow }) {
             title="CLIENTE"
             subtitle="Para los PCs de los compañeros"
             icon={<Monitor className="w-5 h-5" />}
-            filename={`PuenteZebra-CLIENTE.exe`}
+            filename="PuenteZebra-CLIENTE.exe"
           />
         </div>
+        <p className="text-xs text-zinc-500 flex items-center gap-1.5">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+          Ambos son ejecutables independientes: no requieren instalación ni
+          permisos de administrador para ejecutarse.
+        </p>
       </CardContent>
     </Card>
   );
@@ -430,37 +600,40 @@ function DownloadTile({
     <a
       href={href}
       download
-      className={`group block rounded-xl border p-5 transition-all hover:-translate-y-0.5 hover:shadow-md ${
+      className={`group block rounded-2xl border p-6 transition-all hover:-translate-y-1 hover:shadow-xl ${
         primary
-          ? "border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800"
-          : "border-zinc-200 bg-white hover:border-zinc-300"
+          ? "border-transparent bg-gradient-to-br from-sky-500 to-sky-700 text-white hover:shadow-sky-500/30"
+          : "border-zinc-200 bg-white hover:border-sky-300 hover:shadow-sky-100"
       }`}
     >
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <div
-          className={`w-10 h-10 rounded-lg grid place-items-center ${
-            primary ? "bg-white/10" : "bg-zinc-100"
+          className={`w-12 h-12 rounded-xl grid place-items-center ${
+            primary ? "bg-white/15" : "bg-sky-50 text-sky-700"
           }`}
         >
           {icon}
         </div>
-        <Download
-          className={`w-4 h-4 transition-transform group-hover:translate-y-0.5 ${
-            primary ? "text-white" : "text-zinc-500"
-          }`}
-        />
+        <span
+          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${
+            primary ? "bg-white text-sky-700" : "bg-zinc-900 text-white"
+          } group-hover:gap-2.5 transition-all`}
+        >
+          <Download className="w-3.5 h-3.5" />
+          Descargar
+        </span>
       </div>
-      <div className="font-bold text-base">{title}</div>
+      <div className="font-bold text-lg">{title}</div>
       <div
-        className={`text-xs mt-0.5 mb-2 ${
-          primary ? "text-zinc-300" : "text-zinc-500"
+        className={`text-xs mt-1 mb-3 ${
+          primary ? "text-sky-100/80" : "text-zinc-500"
         }`}
       >
         {subtitle}
       </div>
       <div
         className={`font-mono text-[11px] truncate ${
-          primary ? "text-zinc-400" : "text-zinc-400"
+          primary ? "text-sky-200/70" : "text-zinc-400"
         }`}
       >
         {filename}
@@ -469,21 +642,60 @@ function DownloadTile({
   );
 }
 
+/* ---------------- Versiones anteriores ---------------- */
+
+function OlderVersions({ older }: { older: VersionRow[] }) {
+  return (
+    <section className="space-y-5">
+      <SectionHeading
+        icon={<FileText className="w-5 h-5" />}
+        title="Versiones anteriores"
+        subtitle={
+          older.length === 1
+            ? "1 versión anterior por si necesitas volver atrás."
+            : `${older.length} versiones anteriores por si necesitas volver atrás.`
+        }
+      />
+      <Accordion type="single" collapsible className="space-y-2.5">
+        {older.map((v) => (
+          <AccordionItem
+            key={v.id}
+            value={`v-${v.id}`}
+            className="border border-zinc-200/80 rounded-2xl px-5 bg-white data-[state=open]:shadow-md transition-shadow"
+          >
+            <AccordionTrigger className="hover:no-underline py-4">
+              <div className="flex items-center gap-3 w-full">
+                <span className="font-mono font-semibold">{v.version}</span>
+                <span className="text-sm text-zinc-500">
+                  {formatDate(v.release_date)}
+                </span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-4">
+              <VersionDetail v={v} />
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </section>
+  );
+}
+
 function VersionDetail({ v }: { v: VersionRow }) {
   return (
-    <div className="space-y-3 pb-2">
+    <div className="space-y-3">
       {v.changelog && (
-        <pre className="whitespace-pre-wrap font-sans text-sm text-zinc-700 bg-zinc-50 rounded-md p-3 border border-zinc-100 max-h-60 overflow-y-auto">
+        <pre className="whitespace-pre-wrap font-sans text-sm text-zinc-700 bg-zinc-50 rounded-xl p-4 border border-zinc-100 max-h-60 overflow-y-auto">
           {v.changelog}
         </pre>
       )}
       <div className="flex flex-wrap gap-2">
-        <Button asChild size="sm" variant="default">
+        <Button asChild size="sm" className="rounded-lg">
           <a href={v.servidor_url} download>
             <Server className="w-4 h-4 mr-1.5" /> SERVIDOR
           </a>
         </Button>
-        <Button asChild size="sm" variant="outline">
+        <Button asChild size="sm" variant="outline" className="rounded-lg">
           <a href={v.cliente_url} download>
             <Monitor className="w-4 h-4 mr-1.5" /> CLIENTE
           </a>
@@ -493,60 +705,104 @@ function VersionDetail({ v }: { v: VersionRow }) {
   );
 }
 
+/* ---------------- Instrucciones ---------------- */
+
 function InstructionsSection() {
   return (
-    <section className="space-y-4">
-      <h2 className="text-xl font-semibold">¿Cómo se instala?</h2>
+    <section className="space-y-6">
+      <SectionHeading
+        icon={<MousePointerClick className="w-5 h-5" />}
+        title="Instalación paso a paso"
+        subtitle="Cinco minutos por PC y queda funcionando para siempre."
+      />
       <div className="grid sm:grid-cols-2 gap-4">
-        <Card className="border-zinc-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Server className="w-4 h-4" /> En tu PC (SERVIDOR)
+        <Card className="border-zinc-200/80 rounded-2xl bg-white">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2.5 text-base">
+              <span className="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 grid place-items-center shrink-0">
+                <Server className="w-4 h-4" />
+              </span>
+              En tu PC (SERVIDOR)
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-zinc-600 space-y-2">
-            <p>
-              1. Descarga y ejecuta <code className="px-1 rounded bg-zinc-100">PuenteZebra-SERVIDOR.exe</code>.
-            </p>
-            <p>
-              2. En el menú de la bandeja, selecciona tu impresora Zebra ZD220 como destino.
-            </p>
-            <p>
-              3. Pulsa <em>Abrir puerto en firewall</em> para que los compañeros puedan enviar trabajos.
-            </p>
-            <p>
-              4. Marca <em>Inicio con Windows</em> si quieres que se ejecute solo al arrancar.
-            </p>
+          <CardContent className="text-sm text-zinc-600">
+            <Paso n={1}>
+              Descarga y ejecuta{" "}
+              <code className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-800 text-[13px]">
+                PuenteZebra-SERVIDOR.exe
+              </code>
+              .
+            </Paso>
+            <Paso n={2}>
+              En el menú de la bandeja, selecciona tu impresora Zebra ZD220
+              como destino.
+            </Paso>
+            <Paso n={3}>
+              Pulsa <em>Abrir puerto en firewall</em> para que los compañeros
+              puedan enviar trabajos.
+            </Paso>
+            <Paso n={4} ultimo>
+              Marca <em>Inicio con Windows</em> si quieres que arranque solo.
+            </Paso>
           </CardContent>
         </Card>
-        <Card className="border-zinc-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Monitor className="w-4 h-4" /> En el PC del compañero (CLIENTE)
+        <Card className="border-zinc-200/80 rounded-2xl bg-white">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2.5 text-base">
+              <span className="w-9 h-9 rounded-xl bg-cyan-100 text-cyan-700 grid place-items-center shrink-0">
+                <Monitor className="w-4 h-4" />
+              </span>
+              En el PC del compañero (CLIENTE)
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-zinc-600 space-y-2">
-            <p>
-              1. Descarga y ejecuta <code className="px-1 rounded bg-zinc-100">PuenteZebra-CLIENTE.exe</code>.
-            </p>
-            <p>
-              2. Pulsa <em>Instalar impresora virtual</em> (pedirá permisos de administrador).
-            </p>
-            <p>
-              3. Indica la IP de tu PC servidor y guarda.
-            </p>
-            <p>
-              4. Imprime desde cualquier programa a <em>"Zebra ZD220 (Red)"</em> y llegará a tu Zebra.
-            </p>
+          <CardContent className="text-sm text-zinc-600">
+            <Paso n={1}>
+              Descarga y ejecuta{" "}
+              <code className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-800 text-[13px]">
+                PuenteZebra-CLIENTE.exe
+              </code>
+              .
+            </Paso>
+            <Paso n={2}>
+              Pulsa <em>Instalar impresora virtual</em> (pedirá permisos de
+              administrador, solo una vez).
+            </Paso>
+            <Paso n={3}>Indica la IP de tu PC servidor y guarda.</Paso>
+            <Paso n={4} ultimo>
+              Imprime desde cualquier programa a <em>“Zebra ZD220 (Red)”</em> y
+              llegará a tu Zebra.
+            </Paso>
           </CardContent>
         </Card>
       </div>
-      <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
-        <strong>Importante:</strong> ambos PCs deben estar en la misma red local
-        (mismo Wi-Fi o cable). Si usas VPN o redes separadas, configura las
-        reglas de firewall de forma manual.
+      <div className="flex gap-3 rounded-2xl bg-amber-50 border border-amber-200/80 p-4 text-sm text-amber-800">
+        <Info className="w-4 h-4 mt-0.5 shrink-0" />
+        <span>
+          <strong>Importante:</strong> ambos PCs deben estar en la misma red
+          local (mismo Wi-Fi o cable). Si usas VPN o redes separadas, configura
+          las reglas de firewall de forma manual.
+        </span>
       </div>
     </section>
+  );
+}
+
+function Paso({
+  n,
+  children,
+  ultimo,
+}: {
+  n: number;
+  children: React.ReactNode;
+  ultimo?: boolean;
+}) {
+  return (
+    <div className={`flex gap-3 ${ultimo ? "" : "pb-3 mb-3 border-b border-zinc-100"}`}>
+      <span className="w-6 h-6 rounded-full bg-zinc-900 text-white text-xs font-bold grid place-items-center shrink-0 mt-0.5">
+        {n}
+      </span>
+      <p className="leading-relaxed">{children}</p>
+    </div>
   );
 }
 
@@ -563,7 +819,7 @@ function AndroidSection({
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!apk) return;
+    if (!apk || !apk.apk_url) return;
     const u = apk.apk_url.startsWith("http")
       ? apk.apk_url
       : window.location.origin + apk.apk_url;
@@ -576,101 +832,194 @@ function AndroidSection({
   if (!apk) return null;
 
   return (
-    <section className="space-y-4" id="apk">
-      <div className="flex items-center gap-2">
-        <h2 className="text-xl font-semibold">App para Android</h2>
-        <Badge variant="secondary" className="font-mono">
-          APK
-        </Badge>
-        {loading && <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />}
-      </div>
-      <Card className="border-zinc-200">
-        <CardContent className="p-6 sm:p-8 grid sm:grid-cols-[1fr_auto] gap-8 items-start">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-lg bg-zinc-900 text-white grid place-items-center shrink-0">
-                <Smartphone className="w-5 h-5" />
+    <section className="space-y-6" id="apk">
+      <SectionHeading
+        icon={<Smartphone className="w-5 h-5" />}
+        title="App para Android"
+        subtitle="Imprime desde el teléfono con la misma red Wi-Fi de la oficina, incluida la impresora virtual del sistema."
+      />
+      <Card className="border-zinc-200/80 rounded-3xl overflow-hidden bg-white shadow-lg shadow-zinc-900/5">
+        <div className="relative bg-gradient-to-br from-[#0B1526] via-[#13294a] to-[#0B1526] text-white px-6 sm:px-8 py-6">
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-[0.07]"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(115deg, #fff 0 12px, transparent 12px 28px)",
+            }}
+          />
+          <div className="relative flex items-center gap-4 flex-wrap">
+            <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/15 grid place-items-center">
+              <Smartphone className="w-6 h-6 text-sky-300" />
+            </div>
+            <div>
+              <div className="font-bold text-lg">
+                PuenteZebra Móvil{" "}
+                <span className="font-mono text-sky-300 text-base">
+                  v{apk.version}
+                </span>
               </div>
-              <div>
-                <div className="font-bold">
-                  PuenteZebra Móvil{" "}
-                  <span className="font-mono">v{apk.version}</span>
-                </div>
-                <div className="text-xs text-zinc-500">
-                  código de versión {apk.version_code} · publicada{" "}
-                  {formatDate(apk.release_date)}
-                </div>
+              <div className="text-xs text-sky-100/60 mt-0.5">
+                código de versión {apk.version_code} · publicada{" "}
+                {formatDate(apk.release_date)}
               </div>
             </div>
-            <p className="text-sm text-zinc-600">
-              Imprime desde el teléfono en las dos impresoras del SERVIDOR
-              (etiquetas Zebra y hoja carta) con el Wi-Fi de la oficina.
-              <strong>Impresora virtual</strong>: al activar el servicio, el
-              teléfono muestra "PuenteZebra ETIQUETAS" y "PuenteZebra
-              DOCUMENTOS" como impresoras, para imprimir desde cualquier app
-              (Fotos, escáner, PDF, WhatsApp…) con vista previa y número de
-              páginas. La app revisa sola si hay versión nueva al abrirla y se
-              actualiza reinstalando: nada se pierde.
+            {loading && (
+              <Loader2 className="w-4 h-4 animate-spin text-white/60 ml-auto" />
+            )}
+          </div>
+        </div>
+        <CardContent className="p-6 sm:p-8 grid sm:grid-cols-[1fr_auto] gap-8 items-start">
+          <div className="space-y-5">
+            <p className="text-sm text-zinc-600 leading-relaxed">
+              Imprime en las dos impresoras del SERVIDOR (etiquetas Zebra y hoja
+              carta) con el Wi-Fi de la oficina. Al activar el servicio,{" "}
+              <strong>“PuenteZebra ETIQUETAS”</strong> y{" "}
+              <strong>“PuenteZebra DOCUMENTOS”</strong> aparecen como impresoras
+              del teléfono: imprime desde Fotos, el escáner, PDF o WhatsApp con{" "}
+              <strong>vista previa y número de páginas</strong>. La app revisa
+              sola si hay versión nueva al abrirla.
             </p>
             {apk.changelog && (
-              <pre className="whitespace-pre-wrap font-sans text-sm text-zinc-700 bg-zinc-50 rounded-md p-4 border border-zinc-100 max-h-56 overflow-y-auto">
+              <pre className="whitespace-pre-wrap font-sans text-sm text-zinc-700 bg-sky-50/70 border-l-4 border-sky-200 rounded-xl p-4 border border-zinc-100 max-h-56 overflow-y-auto leading-relaxed">
                 {apk.changelog}
               </pre>
             )}
             {downloadUrl && (
-              <div>
-                <Button asChild>
-                  <a href={downloadUrl} download="PuenteZebra-Movil.apk">
-                    <Download className="w-4 h-4 mr-1.5" /> Descargar APK
-                    (v{apk.version})
-                  </a>
-                </Button>
-              </div>
+              <Button asChild size="lg" className="rounded-xl h-12 px-6 text-base bg-gradient-to-r from-sky-500 to-sky-700 hover:opacity-95 shadow-lg shadow-sky-500/25">
+                <a href={downloadUrl} download="PuenteZebra-Movil.apk">
+                  <Download className="w-5 h-5 mr-2" />
+                  Descargar APK (v{apk.version})
+                </a>
+              </Button>
             )}
-            <ol className="text-xs text-zinc-500 space-y-1.5 list-decimal list-inside">
-              <li>
-                Descarga el APK en el teléfono (o escanea el código QR de la
-                derecha con la cámara).
-              </li>
-              <li>
-                Al abrirlo, Android pedirá{" "}
-                <em>permitir instalar apps de origen desconocido</em>: dale a
-                Permitir (solo la primera vez).
-              </li>
-              <li>
-                Si ya tenías la app instalada, se actualiza ENCIMA: conserva la
-                IP y toda la configuración.
-              </li>
-              <li>
-                Dentro de la app: guarda la IP del SERVIDOR y pulsa{" "}
-                <em>Activar servicio de impresión</em> (Ajustes → Impresión →
-                PuenteZebra Móvil). Desde ese momento puedes imprimir desde
-                cualquier app del teléfono eligiendo{" "}
-                <em>PuenteZebra ETIQUETAS</em> o{" "}
-                <em>PuenteZebra DOCUMENTOS</em> con vista previa, número de
-                páginas y copias.
-              </li>
-            </ol>
+            <div className="rounded-2xl border border-zinc-100 bg-zinc-50/70 divide-y divide-zinc-100">
+              {[
+                {
+                  icon: <Download className="w-4 h-4" />,
+                  texto: (
+                    <>
+                      Descarga el APK en el teléfono (o escanea el código QR de
+                      la derecha con la cámara).
+                    </>
+                  ),
+                },
+                {
+                  icon: <ShieldCheck className="w-4 h-4" />,
+                  texto: (
+                    <>
+                      Al abrirlo, Android pedirá{" "}
+                      <em>permitir instalar apps de origen desconocido</em>:
+                      dale a Permitir (solo la primera vez).
+                    </>
+                  ),
+                },
+                {
+                  icon: <RefreshCw className="w-4 h-4" />,
+                  texto: (
+                    <>
+                      Si ya tenías la app instalada, se actualiza ENCIMA:
+                      conserva la IP y toda la configuración.
+                    </>
+                  ),
+                },
+                {
+                  icon: <Printer className="w-4 h-4" />,
+                  texto: (
+                    <>
+                      Dentro de la app guarda la IP del SERVIDOR y pulsa{" "}
+                      <em>Activar servicio</em>. Desde ese momento puedes
+                      imprimir desde cualquier app eligiendo{" "}
+                      <em>PuenteZebra ETIQUETAS</em> o{" "}
+                      <em>PuenteZebra DOCUMENTOS</em>.
+                    </>
+                  ),
+                },
+              ].map((s, i) => (
+                <div key={i} className="flex gap-3 px-4 py-3 text-sm text-zinc-600">
+                  <span className="w-7 h-7 rounded-full bg-sky-100 text-sky-700 grid place-items-center shrink-0">
+                    {s.icon}
+                  </span>
+                  <p className="leading-relaxed">{s.texto}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="mx-auto space-y-2 text-center">
-            {qr ? (
-              <img
-                src={qr}
-                width={200}
-                height={200}
-                alt="Código QR para descargar el APK"
-                className="rounded-lg border border-zinc-200 bg-white p-2"
-              />
-            ) : (
-              <div className="w-[204px] h-[204px] rounded-lg border border-dashed border-zinc-300 grid place-items-center text-xs text-zinc-400">
-                Generando QR…
-              </div>
-            )}
+          <div className="mx-auto space-y-3 text-center">
+            <div className="p-4 rounded-3xl bg-gradient-to-br from-sky-100 to-sky-50 border border-sky-200/60 shadow-inner">
+              {qr ? (
+                <img
+                  src={qr}
+                  width={208}
+                  height={208}
+                  alt="Código QR para descargar el APK"
+                  className="rounded-xl bg-white"
+                />
+              ) : (
+                <div className="w-[208px] h-[208px] rounded-xl border border-dashed border-sky-300 grid place-items-center text-xs text-sky-500">
+                  Generando QR…
+                </div>
+              )}
+            </div>
             <div className="text-xs text-zinc-500 flex items-center gap-1.5 justify-center">
               <QrCode className="w-3.5 h-3.5" /> Escanea con el teléfono
             </div>
           </div>
         </CardContent>
+      </Card>
+    </section>
+  );
+}
+
+/* ---------------- FAQ ---------------- */
+
+function FaqSection() {
+  const faqs = [
+    {
+      q: "¿Necesita internet o pago por suscripción?",
+      a: "No. Todo funciona por la red local de la oficina (el mismo Wi-Fi o cable). La página solo sirve para repartir los ejecutables: ningún trabajo de impresión sale a internet.",
+    },
+    {
+      q: "¿Los compañeros necesitan permisos de administrador?",
+      a: "Solo una vez, al instalar la impresora virtual con el CLIENTE. Después, imprimir es como imprimir en cualquier otra impresora: sin permisos y desde cualquier programa.",
+    },
+    {
+      q: "¿Cómo actualizo la app del teléfono?",
+      a: "Descarga el APK más nuevo (desde la propia app o escaneando el QR de esta página) e instálalo: Android lo pone ENCIMA del anterior sin borrar nada, ni la IP ni los puertos configurados.",
+    },
+    {
+      q: "¿Y si algo no imprime?",
+      a: "Revisa el orden de siempre: SERVIDOR abierto en la PC de la impresora, teléfono o PC en la misma red, e IP correcta. Si un trabajo falla, el motivo exacto aparece en la notificación y en Ajustes → Impresión (en el teléfono) o en la ventana del SERVIDOR (en Windows).",
+    },
+    {
+      q: "¿Se puede imprimir desde el escáner o desde WhatsApp?",
+      a: "Sí. En el teléfono, cualquier app con menú Imprimir puede usar las impresoras PuenteZebra, con vista previa y número de páginas. En Windows, cualquier programa que imprima puede usar la impresora virtual “Zebra ZD220 (Red)”.",
+    },
+  ];
+  return (
+    <section className="space-y-6">
+      <SectionHeading
+        icon={<Info className="w-5 h-5" />}
+        title="Preguntas frecuentes"
+        subtitle="Las dudas más comunes de la oficina, resueltas."
+      />
+      <Card className="border-zinc-200/80 rounded-2xl bg-white divide-y divide-zinc-100 p-2">
+        <Accordion type="single" collapsible>
+          {faqs.map((f, i) => (
+            <AccordionItem
+              key={i}
+              value={`faq-${i}`}
+              className="border-0 px-4 rounded-xl data-[state=open]:bg-sky-50/60 transition-colors"
+            >
+              <AccordionTrigger className="hover:no-underline text-[15px] font-semibold py-4 text-left">
+                {f.q}
+              </AccordionTrigger>
+              <AccordionContent className="text-sm text-zinc-600 leading-relaxed pb-4">
+                {f.a}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       </Card>
     </section>
   );
@@ -706,15 +1055,18 @@ function LoginView({ onSuccess }: { onSuccess: () => void }) {
   };
 
   return (
-    <div className="max-w-sm mx-auto">
-      <Card className="border-zinc-200">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 rounded-xl bg-zinc-900 grid place-items-center text-white mb-2">
+    <div className="max-w-sm mx-auto pt-10">
+      <Card className="border-zinc-200/80 rounded-3xl shadow-xl shadow-zinc-900/5 bg-white">
+        <CardHeader className="text-center pb-2 pt-8">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500 to-sky-700 grid place-items-center text-white mb-3 shadow-lg shadow-sky-500/30">
             <ShieldCheck className="w-6 h-6" />
           </div>
-          <CardTitle>Panel de administración</CardTitle>
+          <CardTitle className="text-xl">Panel de administración</CardTitle>
+          <p className="text-sm text-zinc-500 mt-1">
+            Publica nuevas versiones para la oficina
+          </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-8">
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="pw">Contraseña</Label>
@@ -725,9 +1077,10 @@ function LoginView({ onSuccess }: { onSuccess: () => void }) {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Introduce la contraseña de admin"
                 autoFocus
+                className="h-11 rounded-xl"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full h-11 rounded-xl" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Entrando…
@@ -1598,34 +1951,41 @@ function ApkVersionsAdminTable({
 
 function Footer() {
   return (
-    <footer className="mt-auto border-t border-zinc-200 bg-white">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 flex items-center justify-between flex-wrap gap-3 text-xs text-zinc-500">
-        <div>
-          © {new Date().getFullYear()} PuenteZebra · Sistema de impresión ZD220
-          en red
-        </div>
+    <footer className="mt-auto bg-[#0B1526] text-white">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex items-center justify-between flex-wrap gap-6">
         <div className="flex items-center gap-3">
+          <Logo size={34} />
+          <div>
+            <div className="font-semibold text-sm">
+              PuenteZebra
+            </div>
+            <div className="text-xs text-sky-100/50">
+              Sistema de impresión ZD220 en red
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 text-xs text-sky-100/60 flex-wrap">
           <a
             href="https://github.com/SEMAIN2026/puentezebra"
             target="_blank"
             rel="noreferrer"
-            className="hover:text-zinc-900 transition-colors inline-flex items-center gap-1"
+            className="hover:text-white transition-colors inline-flex items-center gap-1.5"
           >
             <Github className="w-3.5 h-3.5" /> Código fuente
           </a>
-          <span className="opacity-50">·</span>
+          <span className="opacity-40">·</span>
           <span>Powered by Vercel + Turso + GitHub</span>
-          <span className="opacity-50">·</span>
+          <span className="opacity-40">·</span>
           <span className="inline-flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className="w-1.5 h-1.5 rounded-full bg-zinc-900"
-            />
+            <span aria-hidden className="w-1.5 h-1.5 rounded-full bg-sky-400" />
             Creado por{" "}
-            <span className="font-semibold text-zinc-900">
-              Walter Piñera
-            </span>
+            <span className="font-semibold text-white">Walter Piñera</span>
           </span>
+        </div>
+      </div>
+      <div className="border-t border-white/5">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 text-[11px] text-sky-100/40">
+          © {new Date().getFullYear()} PuenteZebra · Hecho para imprimir etiquetas sin complicaciones.
         </div>
       </div>
     </footer>

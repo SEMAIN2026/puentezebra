@@ -19,6 +19,10 @@ import android.printservice.PrintJob;
 import android.printservice.PrintService;
 import android.printservice.PrinterDiscoverySession;
 import android.graphics.pdf.PdfRenderer;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +33,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Servicio de impresión del sistema: expone las dos impresoras del SERVIDOR
  * ("PuenteZebra ETIQUETAS" y "PuenteZebra DOCUMENTOS") a todas las apps del
  * teléfono.
+ *
+ * v1.3.2 — ARREGLO del error "ERROR AL IMPRIMIR: FILE DESCRIPTOR NOT SEEKABLE"
+ * de la 1.3.1 (imprimir desde otras apps fallaba siempre): el spooler de
+ * Android entrega el documento al servicio como un descriptor que puede ser
+ * una TUBERÍA (no se puede hacer seek sobre él), mientras que PdfRenderer
+ * exige un archivo real. Desde la propia app las pruebas sí funcionaban
+ * porque no pasan por el spooler. Ahora el documento se copia SIEMPRE a un
+ * archivo temporal antes de renderizarlo y el archivo se borra al terminar.
  *
  * v1.3.1 — ARREGLO del error "ERROR AL IMPRIMIR: MUST BE CALLED FROM THE MAIN
  * THREAD" de la 1.3.0 (trabajos atascados en "Imprimiendo…" para siempre):
@@ -291,6 +303,11 @@ public class PuentePrintService extends PrintService {
      * Renderiza y envía el trabajo por red. Corre en el hilo del fondo y NO
      * toca ningún método de PrintJob (por eso no puede fallar con "Must be
      * called from the main thread").
+     *
+     * v1.3.2: el descriptor que entrega el spooler puede ser una TUBERÍA (no
+     * seekable) y PdfRenderer exige un archivo real; por eso imprimir desde
+     * otras apps fallaba con "file descriptor not seekable". El documento se
+     * copia SIEMPRE a un archivo temporal y el renderer trabaja sobre él.
      */
     private Resultado ejecutar(ParcelFileDescriptor fd, boolean etiquetas, int copias,
                                PageRange[] paginas, AtomicBoolean cancelar) throws Exception {
@@ -304,8 +321,36 @@ public class PuentePrintService extends PrintService {
         int puerto = prefs.getInt(etiquetas ? "portTags" : "portDocs",
                 etiquetas ? 9100 : 9101);
         Resultado res = new Resultado();
-        PdfRenderer renderer = new PdfRenderer(fd);
+
+        // 1) Copiar el documento a un archivo temporal. Es una lectura
+        //    SECUENCIAL: funciona igual si el descriptor es una tubería.
+        File carpeta = new File(getCacheDir(), "spool");
+        if (!carpeta.exists()) {
+            carpeta.mkdirs();
+        }
+        File temporal = File.createTempFile("doc_", ".pdf", carpeta);
+        ParcelFileDescriptor fdArchivo = null;
+        PdfRenderer renderer = null;
         try {
+            InputStream in = new ParcelFileDescriptor.AutoCloseInputStream(fd);
+            OutputStream out = new FileOutputStream(temporal);
+            byte[] bufer = new byte[65536];
+            int leidos;
+            while ((leidos = in.read(bufer)) > 0) {
+                out.write(bufer, 0, leidos);
+            }
+            out.flush();
+            out.close();
+            in.close(); // cierra también el fd original: la copia ya está hecha
+            if (temporal.length() == 0) {
+                throw new Exception("el documento llegó vacío (PDF de 0 bytes) desde "
+                        + "la app que mandó imprimir");
+            }
+
+            // 2) Renderizar sobre el archivo temporal (SIEMPRE seekable).
+            fdArchivo = ParcelFileDescriptor.open(temporal,
+                    ParcelFileDescriptor.MODE_READ_ONLY);
+            renderer = new PdfRenderer(fdArchivo);
             int totalPaginas = renderer.getPageCount();
             PrintEngine.Canal canal = PrintEngine.Canal.abrir(ip, puerto);
             try {
@@ -358,9 +403,18 @@ public class PuentePrintService extends PrintService {
             return res;
         } finally {
             try {
-                renderer.close();
+                if (renderer != null) {
+                    renderer.close();
+                }
             } catch (Throwable ignored) {
             }
+            try {
+                if (fdArchivo != null) {
+                    fdArchivo.close();
+                }
+            } catch (Throwable ignored) {
+            }
+            temporal.delete();
         }
     }
 
