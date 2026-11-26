@@ -26,7 +26,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # Local env files
-.env
+/.env
 .env*.local
 
 # Vercel
@@ -41,7 +41,7 @@ next-env.d.ts
 .idea/
 
 # Project artifacts
-download/
+/download/
 scripts/*.png
 scripts/*.log
 scripts/build.sh
@@ -66,11 +66,11 @@ Caddyfile
 
 # Nunca publicar en el repo: scripts locales con credenciales, app Android
 # (keystore), artefactos de compilación y registros internos.
-scripts/
-puentezebra-movil/
-download/
-db/
-skills/
-worklog.md
-mini-services/
-.env
+/scripts/
+/puentezebra-movil/
+/download/
+/db/
+/skills/
+/worklog.md
+/mini-services/
+/.env
