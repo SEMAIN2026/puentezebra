@@ -203,6 +203,22 @@ export async function deleteReleaseFiles(version: string): Promise<void> {
   });
 }
 
+// Borra SOLO los trozos de un archivo (fileIndex) de una versión, sin tocar
+// los del otro archivo. Arreglo importante: antes storeInTurso borraba TODOS
+// los archivos de la versión antes de guardar cada uno, así que guardar el
+// CLIENTE después del SERVIDOR BORRABA al SERVIDOR de Turso sin darse cuenta
+// (y si GitHub fallaba, su enlace quedaba roto: /api/download → 404).
+export async function deleteReleaseFile(
+  version: string,
+  fileIndex: number
+): Promise<void> {
+  const c = getTurso();
+  await c.execute({
+    sql: `DELETE FROM release_files WHERE version = ? AND file_index = ?`,
+    args: [version, fileIndex],
+  });
+}
+
 export interface ReleaseFileMeta {
   totalChunks: number;
   totalBytes: number;

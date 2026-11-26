@@ -4,7 +4,7 @@ import {
   assembleChunks,
   cleanupSession,
   putReleaseChunk,
-  deleteReleaseFiles,
+  deleteReleaseFile,
   getVersionRow,
   getTurso,
 } from "@/lib/turso";
@@ -34,7 +34,10 @@ async function storeInTurso(
   data: Uint8Array
 ): Promise<number> {
   const CHUNK = 3 * 1024 * 1024;
-  await deleteReleaseFiles(version); // reemplaza si se vuelve a subir
+  // Arreglo v2: se borra SOLO el archivo indicado. Antes se borraban TODOS los
+  // archivos de la versión, y guardar el CLIENTE después del SERVIDOR dejaba
+  // al SERVIDOR sin copia en Turso (si GitHub fallaba, su enlace era un 404).
+  await deleteReleaseFile(version, fileIndex);
   let chunks = 0;
   for (let off = 0; off < data.length || off === 0; off += CHUNK) {
     const end = Math.min(off + CHUNK, data.length);
