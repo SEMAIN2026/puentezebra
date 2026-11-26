@@ -74,3 +74,4 @@ Caddyfile
 /worklog.md
 /mini-services/
 /.env
+tool-results/

@@ -604,9 +604,13 @@ function AndroidSection({
             </div>
             <p className="text-sm text-zinc-600">
               Imprime desde el teléfono en las dos impresoras del SERVIDOR
-              (etiquetas Zebra y hoja carta) con el Wi-Fi de la oficina. La
-              app revisa sola si hay versión nueva al abrirla y se actualiza
-              reinstalando: nada se pierde.
+              (etiquetas Zebra y hoja carta) con el Wi-Fi de la oficina.
+              <strong>Impresora virtual</strong>: al activar el servicio, el
+              teléfono muestra "PuenteZebra ETIQUETAS" y "PuenteZebra
+              DOCUMENTOS" como impresoras, para imprimir desde cualquier app
+              (Fotos, escáner, PDF, WhatsApp…) con vista previa y número de
+              páginas. La app revisa sola si hay versión nueva al abrirla y se
+              actualiza reinstalando: nada se pierde.
             </p>
             {apk.changelog && (
               <pre className="whitespace-pre-wrap font-sans text-sm text-zinc-700 bg-zinc-50 rounded-md p-4 border border-zinc-100 max-h-56 overflow-y-auto">
@@ -636,6 +640,15 @@ function AndroidSection({
               <li>
                 Si ya tenías la app instalada, se actualiza ENCIMA: conserva la
                 IP y toda la configuración.
+              </li>
+              <li>
+                Dentro de la app: guarda la IP del SERVIDOR y pulsa{" "}
+                <em>Activar servicio de impresión</em> (Ajustes → Impresión →
+                PuenteZebra Móvil). Desde ese momento puedes imprimir desde
+                cualquier app del teléfono eligiendo{" "}
+                <em>PuenteZebra ETIQUETAS</em> o{" "}
+                <em>PuenteZebra DOCUMENTOS</em> con vista previa, número de
+                páginas y copias.
               </li>
             </ol>
           </div>
