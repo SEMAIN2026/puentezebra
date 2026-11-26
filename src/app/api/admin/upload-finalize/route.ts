@@ -80,7 +80,7 @@ async function tryGithubAsset(
       data: data.buffer.slice(
         data.byteOffset,
         data.byteOffset + data.byteLength
-      ),
+      ) as ArrayBuffer,
       contentType: "application/vnd.microsoft.portable-executable",
     });
     return url;
