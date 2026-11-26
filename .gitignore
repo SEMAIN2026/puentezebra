@@ -75,3 +75,20 @@ Caddyfile
 /mini-services/
 /.env
 tool-results/
+
+# Android: fuentes sí (app13, build131.sh); binarios, SDK y keystore NO
+/android/keys/
+/android/sdk/
+/android/amazon-corretto-*/
+/android/jdk21.tar.gz
+/android/jadx*
+/android/r8.jar
+/android/*.apk
+/android/*.idsig
+/android/build*/
+/android/out*/
+/android/test*/
+/android/apk120
+/android/repo*.xml
+/buildtools34.zip
+/platform34.zip
