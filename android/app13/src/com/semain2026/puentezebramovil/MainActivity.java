@@ -39,6 +39,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.SpinnerAdapter;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.io.ByteArrayOutputStream;
@@ -74,6 +75,7 @@ public class MainActivity extends Activity {
     private EditText etPortTags;
     private EditText etText;
     private Spinner spDest;
+    private Switch swColor;
     private TextView tvStatus;
 
     @Override
@@ -290,6 +292,18 @@ public class MainActivity extends Activity {
         tApp.addView(filaTam);
         tApp.addView(nota("Normal: 102×152 (etiqueta 4×6\" o 100×150). "
                 + "Otras comunes: 100×100, 51×89 (2×3,5\")."));
+
+        // v1.3.3: color para la impresora de DOCUMENTOS (setq de ESC/P-R)
+        LinearLayout filaColor = row();
+        TextView etiquetaColor = campoLabel("Imprimir DOCUMENTOS a color");
+        swColor = new Switch(this);
+        swColor.setChecked(prefs.getBoolean("docsColor", true));
+        filaColor.addView(etiquetaColor, lpWeights());
+        filaColor.addView(swColor);
+        espacio(tApp, 6);
+        tApp.addView(filaColor);
+        tApp.addView(nota("A color: fotos y gráficos con tinta de color. "
+                + "Apagado: solo tinta negra (más rápido y barato para texto)."));
 
         espacio(tApp, 6);
         tApp.addView(campoLabel("Texto a imprimir"));
@@ -628,6 +642,7 @@ public class MainActivity extends Activity {
                 .putInt("dest", spDest.getSelectedItemPosition())
                 .putInt("labelWmm", portOr(etLblW, 102))
                 .putInt("labelHmm", portOr(etLblH, 152))
+                .putBoolean("docsColor", swColor != null && swColor.isChecked())
                 .apply();
     }
 
@@ -663,8 +678,200 @@ public class MainActivity extends Activity {
 
     private void paginaPrueba() {
         guardarSilencioso();
-        sendBytes(ip(), portOr(etPortDocs, 9101),
-                testPage().getBytes(StandardCharsets.ISO_8859_1), "página de prueba");
+        pdfADocumentos(pdfPaginaPrueba(), false, "página de prueba");
+    }
+
+    /**
+     * v1.3.3 — Imprime un PDF (bytes) en la impresora de DOCUMENTOS con el
+     * mismo motor ESC/P-R del servicio: hoja carta a 360 dpi, en flujo, con
+     * el color opcional. Así la página de prueba, el texto y los archivos
+     * siguen EXACTAMENTE el mismo camino que imprimir desde otra app.
+     */
+    private void pdfADocumentos(final byte[] pdf, final boolean color, final String que) {
+        final String host = ip();
+        if (host.isEmpty()) {
+            status("Escribe la IP del SERVIDOR (la que muestra su ventana).");
+            toast("Falta la IP del SERVIDOR");
+            return;
+        }
+        final int puerto = portOr(etPortDocs, 9101);
+        status("Imprimiendo " + que + " en DOCUMENTOS (" + (color ? "color" : "monocromo")
+                + ") vía " + host + ":" + puerto + " …");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String resultado;
+                try {
+                    File temporal = File.createTempFile("pz_", ".pdf", getCacheDir());
+                    ParcelFileDescriptor pfd = null;
+                    PdfRenderer renderer = null;
+                    PrintEngine.Canal canal = null;
+                    try {
+                        FileOutputStream out = new FileOutputStream(temporal);
+                        out.write(pdf);
+                        out.flush();
+                        out.close();
+                        pfd = ParcelFileDescriptor.open(temporal,
+                                ParcelFileDescriptor.MODE_READ_ONLY);
+                        renderer = new PdfRenderer(pfd);
+                        canal = PrintEngine.Canal.abrir(host, puerto);
+                        long bytes = imprimirPdfEscpr(renderer, canal, color);
+                        resultado = "OK — " + que + ": " + renderer.getPageCount()
+                                + " pág., " + bytes + " bytes a " + host + ":" + puerto
+                                + ". Revisa la impresora.";
+                    } finally {
+                        try {
+                            if (canal != null) {
+                                canal.cerrar();
+                            }
+                        } catch (Throwable ignored) {
+                        }
+                        try {
+                            if (renderer != null) {
+                                renderer.close();
+                            }
+                        } catch (Throwable ignored) {
+                        }
+                        try {
+                            if (pfd != null) {
+                                pfd.close();
+                            }
+                        } catch (Throwable ignored) {
+                        }
+                        temporal.delete();
+                    }
+                } catch (Exception e) {
+                    resultado = "ERROR: no se pudo imprimir " + que + " — " + shortMsg(e)
+                            + ". ¿El SERVIDOR está abierto y el teléfono en la misma red Wi-Fi?";
+                }
+                final String msg = resultado;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        status(msg);
+                        toast(msg);
+                    }
+                });
+            }
+        }, "pz-pdf-doc").start();
+    }
+
+    /** Sesión ESC/P-R completa de todas las páginas; devuelve los bytes enviados. */
+    private long imprimirPdfEscpr(PdfRenderer renderer, PrintEngine.Canal canal,
+                                  boolean color) throws Exception {
+        final java.io.OutputStream flujo = canal.flujo();
+        final long[] total = {0};
+        java.io.OutputStream contar = new java.io.OutputStream() {
+            @Override
+            public void write(int b) throws java.io.IOException {
+                flujo.write(b);
+                total[0]++;
+            }
+
+            @Override
+            public void write(byte[] b, int off, int len) throws java.io.IOException {
+                flujo.write(b, off, len);
+                total[0] += len;
+            }
+
+            @Override
+            public void flush() throws java.io.IOException {
+                flujo.flush();
+            }
+        };
+        contar.write(EpsonEscpr.sesionInicio(color));
+        int totalPaginas = renderer.getPageCount();
+        for (int p = 0; p < totalPaginas; p++) {
+            contar.write(EpsonEscpr.inicioPagina(p + 1));
+            PrintEngine.imprimirPaginaEscpr(renderer, p, contar);
+            contar.write(EpsonEscpr.finPagina(p < totalPaginas - 1));
+            contar.flush();
+        }
+        contar.write(EpsonEscpr.finTrabajo());
+        contar.flush();
+        return total[0];
+    }
+
+    /** Página de prueba en PDF (hoja carta): texto, recuadro y degradado. */
+    private byte[] pdfPaginaPrueba() {
+        String fecha = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                .format(new Date());
+        PdfDocument doc = new PdfDocument();
+        PdfDocument.Page pagina = doc.startPage(
+                new PdfDocument.PageInfo.Builder(612, 792, 1).create());
+        Canvas lienzo = pagina.getCanvas();
+        lienzo.drawColor(-1);
+        Paint p = new Paint();
+        p.setAntiAlias(true);
+        p.setColor(-16777216);
+        p.setTextSize(26);
+        p.setFakeBoldText(true);
+        lienzo.drawText("P U E N T E Z E B R A   M Ó V I L", 60, 90, p);
+        p.setFakeBoldText(false);
+        p.setTextSize(14);
+        lienzo.drawText("Prueba de la impresora de DOCUMENTOS (Epson, hoja carta)", 60, 120, p);
+        lienzo.drawText("Fecha: " + fecha, 60, 145, p);
+        p.setStrokeWidth(2);
+        lienzo.drawRect(60, 170, 552, 174, p);
+        p.setTextSize(16);
+        lienzo.drawText("Si ves ESTA hoja con el recuadro y el degradado,", 60, 210, p);
+        lienzo.drawText("la impresión de documentos e imágenes ya funciona:", 60, 234, p);
+        lienzo.drawText("las fotos y PDF de cualquier app salen con imagen.", 60, 258, p);
+        // degradado de gris: comprueba los niveles intermedios (no solo negro)
+        for (int i = 0; i < 16; i++) {
+            int v = (int) (17 * i);
+            p.setColor(v << 16 | v << 8 | v | 0xFF000000);
+            lienzo.drawRect(60 + i * 31, 300, 91 + i * 31, 360, p);
+        }
+        p.setColor(-16777216);
+        p.setTextSize(13);
+        lienzo.drawText("PuenteZebra Móvil v1.3.3 · ESC/P-R 360 dpi", 60, 730, p);
+        doc.finishPage(pagina);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try {
+            doc.writeTo(baos);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(e);
+        }
+        doc.close();
+        return baos.toByteArray();
+    }
+
+    /** Convierte texto plano en PDF carta (varias páginas de 52 líneas). */
+    static byte[] pdfDeTexto(String texto) {
+        List<String> lineas = wrapLines(ascii(texto)
+                .replace("\r\n", "\n").replace("\r", "\n").split("\n", -1), 80);
+        PdfDocument doc = new PdfDocument();
+        int numero = 1;
+        int indice = 0;
+        while (indice < lineas.size() || numero == 1) {
+            PdfDocument.Page pagina = doc.startPage(
+                    new PdfDocument.PageInfo.Builder(612, 792, numero).create());
+            Canvas lienzo = pagina.getCanvas();
+            lienzo.drawColor(-1);
+            Paint p = new Paint();
+            p.setAntiAlias(true);
+            p.setColor(-16777216);
+            p.setTextSize(13);
+            int y = 60;
+            for (int i = 0; i < 52 && indice < lineas.size(); i++, indice++) {
+                lienzo.drawText(lineas.get(indice), 50, y, p);
+                y += 14;
+            }
+            doc.finishPage(pagina);
+            numero++;
+            if (indice >= lineas.size()) {
+                break;
+            }
+        }
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try {
+            doc.writeTo(baos);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(e);
+        }
+        doc.close();
+        return baos.toByteArray();
     }
 
     private void imprimirTexto() {
@@ -682,9 +889,7 @@ public class MainActivity extends Activity {
                     wrapTextAsZPL(texto, anchoDots).getBytes(StandardCharsets.UTF_8),
                     "etiqueta (texto → ZPL)");
         } else {
-            sendBytes(ip(), portOr(etPortDocs, 9101),
-                    pageFromText(texto).getBytes(StandardCharsets.ISO_8859_1),
-                    "documento (texto → hoja)");
+            pdfADocumentos(pdfDeTexto(texto), false, "documento (texto → hoja)");
         }
     }
 
@@ -731,13 +936,30 @@ public class MainActivity extends Activity {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                byte[] bytes;
-                                String tipo;
                                 if (spDest.getSelectedItemPosition() != 0) {
-                                    sendBytes(ip(), portOr(etPortDocs, 9101), contenido,
-                                            "archivo → documento (bytes tal cual)");
+                                    // v1.3.3: los documentos SIEMPRE por el motor
+                                    // ESC/P-R (antes se mandaban los bytes crudos
+                                    // del PDF y el L3250 imprimía basura).
+                                    byte[] pdf;
+                                    try {
+                                        if (esPdf(contenido)) {
+                                            pdf = contenido;
+                                        } else if (esImagen(contenido)) {
+                                            pdf = imagenAPdf(contenido);
+                                        } else {
+                                            pdf = pdfDeTexto(
+                                                    new String(contenido, StandardCharsets.UTF_8));
+                                        }
+                                    } catch (Exception e) {
+                                        postStatus("No se pudo preparar el documento: "
+                                                + shortMsg(e));
+                                        return;
+                                    }
+                                    pdfADocumentos(pdf, true, "archivo → documento");
                                     return;
                                 }
+                                byte[] bytes;
+                                String tipo;
                                 if (looksLikeZPL(contenido)) {
                                     bytes = contenido;
                                     tipo = "archivo ZPL → etiqueta";
@@ -880,6 +1102,61 @@ public class MainActivity extends Activity {
 
     private byte[] imagenAPdf(Uri uri) throws Exception {
         Bitmap imagen = decodificar(uri, 1600);
+        if (imagen == null) {
+            throw new Exception("no se pudo abrir la imagen");
+        }
+        try {
+            PdfDocument doc = new PdfDocument();
+            PdfDocument.Page pagina = doc.startPage(
+                    new PdfDocument.PageInfo.Builder(612, 792, 1).create());
+            Canvas lienzo = pagina.getCanvas();
+            lienzo.drawColor(-1);
+            double escala = Math.min(612.0 / imagen.getWidth(), 792.0 / imagen.getHeight());
+            float w = (float) (imagen.getWidth() * escala);
+            float h = (float) (imagen.getHeight() * escala);
+            lienzo.drawBitmap(imagen, (Rect) null,
+                    new RectF((612.0f - w) / 2.0f, (792.0f - h) / 2.0f,
+                            (w + 612.0f) / 2.0f, (h + 792.0f) / 2.0f), (Paint) null);
+            doc.finishPage(pagina);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            doc.writeTo(baos);
+            doc.close();
+            return baos.toByteArray();
+        } finally {
+            imagen.recycle();
+        }
+    }
+
+    /** ¿El contenido es un PDF? (cabecera %PDF) */
+    static boolean esPdf(byte[] b) {
+        return b != null && b.length > 4 && b[0] == '%' && b[1] == 'P'
+                && b[2] == 'D' && b[3] == 'F';
+    }
+
+    /** ¿El contenido es una imagen conocida? (JPEG, PNG, GIF, BMP, WebP) */
+    static boolean esImagen(byte[] b) {
+        if (b == null || b.length < 12) {
+            return false;
+        }
+        if ((b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xD8) {
+            return true;                                  // JPEG
+        }
+        if ((b[0] & 0xFF) == 0x89 && b[1] == 'P' && b[2] == 'N' && b[3] == 'G') {
+            return true;                                  // PNG
+        }
+        if (b[0] == 'G' && b[1] == 'I' && b[2] == 'F') {
+            return true;                                  // GIF
+        }
+        if (b[0] == 'B' && b[1] == 'M') {
+            return true;                                  // BMP
+        }
+        return b[0] == 'R' && b[1] == 'I' && b[2] == 'F' && b[3] == 'F'
+                && b[8] == 'W' && b[9] == 'E';           // WebP
+    }
+
+    /** Una imagen (bytes) centrada en una hoja carta PDF. */
+    private byte[] imagenAPdf(byte[] datos) throws Exception {
+        Bitmap imagen = BitmapFactory.decodeByteArray(datos, 0, datos.length);
         if (imagen == null) {
             throw new Exception("no se pudo abrir la imagen");
         }
@@ -1097,34 +1374,6 @@ public class MainActivity extends Activity {
             return true;
         }
         return s.substring(0, Math.min(200, s.length())).contains("^XA");
-    }
-
-    static String testPage() {
-        String fecha = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-                .format(new Date());
-        return "\u001bE\r\n\r\n       P U E N T E Z E B R A   M O V I L  -  P R U E B A\r\n"
-                + "       -------------------------------------------------\r\n\r\n"
-                + "       Impresora de DOCUMENTOS (hoja carta)\r\n"
-                + "       Fecha: " + fecha + "\r\n\r\n"
-                + "       Si ves esta pagina, PuenteZebra Movil\r\n"
-                + "       funciona correctamente.\r\n\r\n\f";
-    }
-
-    static String pageFromText(String texto) {
-        String[] lineas = ascii(texto).replace("\r\n", "\n").replace("\r", "\n")
-                .split("\n", -1);
-        StringBuilder sb = new StringBuilder("\u001bE");
-        List<String> envueltas = wrapLines(lineas, 78);
-        int contadas = 0;
-        for (String linea : envueltas) {
-            sb.append(linea).append("\r\n");
-            contadas++;
-            if (contadas >= 55) {
-                break;
-            }
-        }
-        sb.append("\f");
-        return sb.toString();
     }
 
     static List<String> wrapLines(String[] lineas, int ancho) {

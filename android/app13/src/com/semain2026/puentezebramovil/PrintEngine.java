@@ -143,6 +143,80 @@ public final class PrintEngine {
     }
 
     /**
+     * v1.3.3 — Imprime una página del PDF en la impresora Epson de documentos
+     * con ESC/P-R en FLUJO (línea a línea, sin montar el megabyte entero):
+     * renderiza a 360 dpi sobre el área imprimible carta, convierte cada fila
+     * a niveles de gris (0 = negro, 255 = blanco: el L3250 hace el tramado)
+     * y omite las filas totalmente blancas (la y de «dsnd» es absoluta).
+     *
+     * @return los dpi usados de verdad (360; 180 si hubo que rebajar por memoria)
+     */
+    public static int imprimirPaginaEscpr(PdfRenderer renderer, int numPagina,
+                                          OutputStream salida) throws IOException {
+        final int ancho = EpsonEscpr.ANCHO_IMPRIMIBLE;
+        final int alto = EpsonEscpr.ALTO_IMPRIMIBLE;
+        PdfRenderer.Page page = renderer.openPage(numPagina);
+        Bitmap bmp;
+        boolean mitad = false;
+        try {
+            try {
+                bmp = renderPagina(page, ancho, alto);
+            } catch (OutOfMemoryError oom) {
+                System.gc();
+                mitad = true;
+                bmp = renderPagina(page, ancho / 2, alto / 2);
+            }
+        } finally {
+            page.close();
+        }
+        try {
+            if (mitad) {
+                // 180 dpi ampliada ×2: cada fila sale dos veces y cada píxel dos veces
+                int wm = bmp.getWidth();
+                int hm = bmp.getHeight();
+                int[] fila = new int[wm];
+                byte[] grises = new byte[ancho];
+                for (int y = 0; y < hm; y++) {
+                    bmp.getPixels(fila, 0, wm, 0, y, wm, 1);
+                    for (int x = 0; x < wm; x++) {
+                        int c = fila[x];
+                        int gris = (((c >> 16) & 255) * 77 + ((c >> 8) & 255) * 150
+                                + (c & 255) * 29) >> 8;
+                        grises[x * 2] = (byte) gris;
+                        grises[x * 2 + 1] = (byte) gris;
+                    }
+                    EpsonEscpr.escribirLinea(salida, y * 2, grises);
+                    EpsonEscpr.escribirLinea(salida, y * 2 + 1, grises);
+                }
+                return 180;
+            }
+            int w = bmp.getWidth();
+            int h = bmp.getHeight();
+            int[] fila = new int[w];
+            byte[] grises = new byte[w];
+            for (int y = 0; y < h; y++) {
+                bmp.getPixels(fila, 0, w, 0, y, w, 1);
+                boolean blanca = true;
+                for (int x = 0; x < w; x++) {
+                    int c = fila[x];
+                    int gris = (((c >> 16) & 255) * 77 + ((c >> 8) & 255) * 150
+                            + (c & 255) * 29) >> 8;
+                    grises[x] = (byte) gris;
+                    if (gris != 255) {
+                        blanca = false;
+                    }
+                }
+                if (!blanca) {
+                    EpsonEscpr.escribirLinea(salida, y, grises);
+                }
+            }
+            return 360;
+        } finally {
+            bmp.recycle();
+        }
+    }
+
+    /**
      * Canal abierto al SERVIDOR para escribir página por página sin acumular
      * todo el trabajo en memoria.
      */
@@ -165,6 +239,11 @@ public final class PrintEngine {
             OutputStream os = socket.getOutputStream();
             os.write(datos);
             os.flush();
+        }
+
+        /** Flujo bruto del socket (con búfer), para el modo ESC/P-R en flujo. */
+        public OutputStream flujo() throws IOException {
+            return new java.io.BufferedOutputStream(socket.getOutputStream(), 1 << 16);
         }
 
         public void cerrar() {

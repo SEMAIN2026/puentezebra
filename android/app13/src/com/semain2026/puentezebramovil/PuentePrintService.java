@@ -166,9 +166,10 @@ public class PuentePrintService extends PrintService {
     private PrinterCapabilitiesInfo capsDocumentos() {
         PrinterCapabilitiesInfo.Builder b = new PrinterCapabilitiesInfo.Builder(idD);
         b.addMediaSize(PrintAttributes.MediaSize.NA_LETTER, true);
-        b.addResolution(new PrintAttributes.Resolution("pz-300", "300 dpi",
-                PrintEngine.DPI_DOC, PrintEngine.DPI_DOC), true);
-        b.setColorModes(PrintAttributes.COLOR_MODE_MONOCHROME, PrintAttributes.COLOR_MODE_MONOCHROME);
+        b.addResolution(new PrintAttributes.Resolution("pz-360", "360 dpi",
+                360, 360), true);
+        b.setColorModes(PrintAttributes.COLOR_MODE_MONOCHROME,
+                PrintAttributes.COLOR_MODE_COLOR);
         b.setMinMargins(PrintAttributes.Margins.NO_MARGINS);
         return b.build();
     }
@@ -202,6 +203,7 @@ public class PuentePrintService extends PrintService {
         final String nombre = nombre(info);
         final int copias = Math.max(1, info.getCopies());
         final PageRange[] paginas = info.getPages();
+        final boolean color = prefs().getBoolean("docsColor", true);
         final AtomicBoolean cancelar = new AtomicBoolean(false);
         try {
             cancelados.put(job.getId(), cancelar);
@@ -217,7 +219,7 @@ public class PuentePrintService extends PrintService {
                 Resultado r = null;
                 Throwable fallo = null;
                 try {
-                    r = ejecutar(fd, etiquetas, copias, paginas, cancelar);
+                    r = ejecutar(fd, etiquetas, copias, paginas, color, cancelar);
                 } catch (Throwable t) {
                     fallo = t;
                 } finally {
@@ -249,7 +251,7 @@ public class PuentePrintService extends PrintService {
                                     + (etiquetas ? "ETIQUETAS (Zebra)" : "DOCUMENTOS (carta)")
                                     + ": " + res.paginas + " pág., " + res.bytes + " bytes, "
                                     + copias + " copia(s)"
-                                    + (!etiquetas && res.dpi < PrintEngine.DPI_DOC
+                                    + (!etiquetas && res.dpi < 360
                                         ? " (a " + res.dpi + " dpi por memoria)" : "")
                                     + ". Revisa la impresora.");
                         }
@@ -295,8 +297,35 @@ public class PuentePrintService extends PrintService {
     private static final class Resultado {
         int paginas;
         long bytes;
-        int dpi = PrintEngine.DPI_DOC;
+        int dpi = 360;
         boolean cancelado;
+    }
+
+    /** Cuenta los bytes que pasan por él (para el aviso final). */
+    private static final class Contador extends java.io.OutputStream {
+        private final java.io.OutputStream base;
+        long total;
+
+        Contador(java.io.OutputStream base) {
+            this.base = base;
+        }
+
+        @Override
+        public void write(int b) throws java.io.IOException {
+            base.write(b);
+            total++;
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) throws java.io.IOException {
+            base.write(b, off, len);
+            total += len;
+        }
+
+        @Override
+        public void flush() throws java.io.IOException {
+            base.flush();
+        }
     }
 
     /**
@@ -310,7 +339,8 @@ public class PuentePrintService extends PrintService {
      * copia SIEMPRE a un archivo temporal y el renderer trabaja sobre él.
      */
     private Resultado ejecutar(ParcelFileDescriptor fd, boolean etiquetas, int copias,
-                               PageRange[] paginas, AtomicBoolean cancelar) throws Exception {
+                               PageRange[] paginas, boolean color,
+                               AtomicBoolean cancelar) throws Exception {
         SharedPreferences prefs = prefs();
         String ip = prefs.getString("ip", "").trim();
         if (ip.isEmpty()) {
@@ -355,43 +385,65 @@ public class PuentePrintService extends PrintService {
             PrintEngine.Canal canal = PrintEngine.Canal.abrir(ip, puerto);
             try {
                 synchronized (candado) {
-                    for (int copia = 0; copia < copias; copia++) {
-                        for (int p = 0; p < totalPaginas; p++) {
-                            if (cancelar.get()) {
-                                res.cancelado = true;
-                                return res;
-                            }
-                            if (!paginaSeleccionada(p, paginas, totalPaginas)) {
-                                continue;
-                            }
-                            byte[] datos;
-                            if (etiquetas) {
+                    if (etiquetas) {
+                        // Zebra (ZPL): igual que siempre, página a página.
+                        for (int copia = 0; copia < copias; copia++) {
+                            for (int p = 0; p < totalPaginas; p++) {
+                                if (cancelar.get()) {
+                                    res.cancelado = true;
+                                    return res;
+                                }
+                                if (!paginaSeleccionada(p, paginas, totalPaginas)) {
+                                    continue;
+                                }
                                 int w = PrintEngine.mmADots(prefs.getInt("labelWmm", 102),
                                         PrintEngine.DPI_ETIQUETAS);
                                 int h = PrintEngine.mmADots(prefs.getInt("labelHmm", 152),
                                         PrintEngine.DPI_ETIQUETAS);
-                                datos = PrintEngine.zplDePagina(renderer, p, w, h);
-                            } else {
-                                // 300 dpi; si falta memoria, bajamos a 200 y 150.
-                                datos = null;
-                                int[] dps = {300, 200, 150};
-                                for (int i = 0; i < dps.length; i++) {
-                                    try {
-                                        res.dpi = dps[i];
-                                        datos = PrintEngine.pclDePagina(renderer, p, dps[i]);
-                                        break;
-                                    } catch (OutOfMemoryError oom) {
-                                        System.gc();
-                                        if (i == dps.length - 1) {
-                                            throw oom;
-                                        }
-                                    }
-                                }
+                                byte[] datos = PrintEngine.zplDePagina(renderer, p, w, h);
+                                canal.escribir(datos);
+                                res.bytes += datos.length;
+                                res.paginas++;
                             }
-                            canal.escribir(datos);
-                            res.bytes += datos.length;
-                            res.paginas++;
                         }
+                    } else {
+                        // v1.3.3 — DOCUMENTOS: sesión ESC/P-R, el idioma nativo
+                        // del Epson L3250 (el PCL de la 1.3.2 era la causa de la
+                        // basura «319w319w…» y de la lentitud). Se envía en
+                        // FLUJO, línea a línea, sin montar todo en memoria.
+                        Contador flujo = new Contador(canal.flujo());
+                        flujo.write(EpsonEscpr.sesionInicio(color));
+                        int ultima = -1;
+                        for (int p = 0; p < totalPaginas; p++) {
+                            if (paginaSeleccionada(p, paginas, totalPaginas)) {
+                                ultima = p;
+                            }
+                        }
+                        int impresas = 0;
+                        for (int copia = 0; copia < copias; copia++) {
+                            for (int p = 0; p < totalPaginas; p++) {
+                                if (cancelar.get()) {
+                                    res.cancelado = true;
+                                    return res;
+                                }
+                                if (!paginaSeleccionada(p, paginas, totalPaginas)) {
+                                    continue;
+                                }
+                                impresas++;
+                                flujo.write(EpsonEscpr.inicioPagina(impresas));
+                                int dpi = PrintEngine.imprimirPaginaEscpr(renderer, p, flujo);
+                                if (dpi < res.dpi) {
+                                    res.dpi = dpi;
+                                }
+                                boolean masPaginas = copia < copias - 1 || p < ultima;
+                                flujo.write(EpsonEscpr.finPagina(masPaginas));
+                                flujo.flush();
+                                res.paginas++;
+                            }
+                        }
+                        flujo.write(EpsonEscpr.finTrabajo());
+                        flujo.flush();
+                        res.bytes = flujo.total;
                     }
                 }
             } finally {
